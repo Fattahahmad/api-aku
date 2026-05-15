@@ -5,6 +5,8 @@
   "description": "backend moodmate",
   "main": "index.js",
   "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "migrate": "node-pg-migrate -m database/migrations",
     "migrate:up": "npm run migrate -- up",
@@ -13,7 +15,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "node-pg-migrate": "^8.0.4"
+    "express": "^5.2.1",
+    "node-pg-migrate": "^8.0.4",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }
