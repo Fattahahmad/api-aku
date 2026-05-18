@@ -23,11 +23,22 @@ export const createUser = async (name, email, hashedPassword) => {
 
 
 export const findUserById = async (id) => {
-  const query = `
-    SELECT id, name, email, current_streak, last_checkin_date, created_at, updated_at 
-    FROM users 
-    WHERE id = $1;
-  `;
+const query = `SELECT * FROM users WHERE id = $1;`;
   const result = await pool.query(query, [id]);
+  return result.rows[0];
+};
+
+export const updateUserProfile = async (userId, name, avatarUrl) => {
+  // COALESCE digunakan agar jika parameter nilainya null, data lama di database tidak tertimpa
+  const query = `
+    UPDATE users 
+    SET 
+      name = COALESCE($1, name), 
+      avatar_url = COALESCE($2, avatar_url),
+      updated_at = NOW()
+    WHERE id = $3
+    RETURNING id, name, email, avatar_url;
+  `;
+  const result = await pool.query(query, [name, avatarUrl, userId]);
   return result.rows[0];
 };
