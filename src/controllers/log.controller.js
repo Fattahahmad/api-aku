@@ -85,16 +85,13 @@ export const getLogDetail = async (req, res, next) => {
 export const updateLog = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { id } = req.params; // ID log dari URL
+    const { id } = req.params; 
     const { mood_score, journal_text } = req.body;
-
-    // Cek apakah log ada
     const log = await logModel.getLogById(id);
     if (!log || log.user_id !== userId) {
       throw new NotFoundError('Log jurnal tidak ditemukan.');
     }
 
-    // VALIDASI: Cek apakah tanggal log bkn hari ini
     const logDate = new Date(log.created_at).toDateString();
     const today = new Date().toDateString();
     
@@ -114,7 +111,6 @@ export const updateLog = async (req, res, next) => {
   }
 };
 
-// 3. TAMBAH LOGIKA DELETE: Hanya bisa di hari yang sama
 export const deleteLog = async (req, res, next) => {
   try {
     const userId = req.user.id;

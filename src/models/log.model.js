@@ -12,12 +12,11 @@ export const createDailyLog = async (userId, moodScore, journalText) => {
 
 export const checkLogToday = async (userId) => {
   const query = `
-    SELECT id, mood_score 
-    FROM daily_logs 
+    SELECT * FROM daily_logs 
     WHERE user_id = $1 AND DATE(created_at) = CURRENT_DATE;
   `;
   const result = await pool.query(query, [userId]);
-  return result.rows[0]; // Akan return undefined jika belum ngisi
+  return result.rows[0];
 };
 
 export const getMonthlyLogs = async (userId, month, year) => {
