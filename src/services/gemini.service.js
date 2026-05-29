@@ -11,7 +11,7 @@ const getMoodLabel = (score) => {
 };
 
 export const generateDailySuggestion = async (moodScore, journalText) => {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   
   const moodLabel = getMoodLabel(moodScore);
   const prompt = `Berikan 1-2 kalimat suggestion dalam bahasa Indonesia untuk user yang sedang memiliki mood "${moodLabel}" dengan jurnal: "${journalText || 'tidak ada jurnal'}". Fokus pada afirmasi atau aktivitas positif yang sesuai. Maksimal 20 kata.`;
@@ -43,7 +43,7 @@ export const generateWeeklySummary = async (averageScore, emotionDistribution) =
 };
 
 export const generateDashboardInsight = async (totalCheckins, averageMood, emotionTrend) => {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   
   const prompt = `Buat insight singkat bahasa Indonesia (maksimal 25 kata) berdasarkan: ${totalCheckins} total check-in, rata-rata mood ${averageMood}/5, tren emosi terbaru: ${emotionTrend}. Fokus pada pola positif dan saran untuk dilanjutkan.`;
 
