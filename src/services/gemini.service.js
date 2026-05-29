@@ -27,7 +27,7 @@ export const generateDailySuggestion = async (moodScore, journalText) => {
 };
 
 export const generateWeeklySummary = async (averageScore, emotionDistribution) => {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   
   const emotions = emotionDistribution.map(e => e.emotion_label || e.emotion).join(', ') || 'tidak ada data';
   const prompt = `Ringkas dalam 2-3 kalimat bahasa Indonesia: user memiliki rata-rata mood ${averageScore}/5 dengan distribusi emosi: ${emotions}. Berikan insight dan saran. Maksimal 30 kata.`;
