@@ -102,10 +102,15 @@ export const updateLog = async (req, res, next) => {
       throw new NotFoundError('Log jurnal tidak ditemukan.');
     }
 
-    const logDate = new Date(log.created_at).toDateString();
-    const today = new Date().toDateString();
+    const logDateUTC = new Date(log.created_at);
+    const logDateWIB = new Date(logDateUTC.getTime() + (7 * 60 * 60 * 1000));
+    const logDateStr = logDateWIB.toISOString().split('T')[0];
     
-    if (logDate !== today) {
+    const now = new Date();
+    const todayWIB = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+    const todayStr = todayWIB.toISOString().split('T')[0];
+    
+    if (logDateStr !== todayStr) {
       throw new InvariantError('Akses ditolak. Jurnal hari-hari sebelumnya tidak dapat diubah.');
     }
 
@@ -131,10 +136,15 @@ export const deleteLog = async (req, res, next) => {
       throw new NotFoundError('Log jurnal tidak ditemukan.');
     }
 
-    const logDate = new Date(log.created_at).toDateString();
-    const today = new Date().toDateString();
+    const logDateUTC = new Date(log.created_at);
+    const logDateWIB = new Date(logDateUTC.getTime() + (7 * 60 * 60 * 1000));
+    const logDateStr = logDateWIB.toISOString().split('T')[0];
     
-    if (logDate !== today) {
+    const now = new Date();
+    const todayWIB = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+    const todayStr = todayWIB.toISOString().split('T')[0];
+    
+    if (logDateStr !== todayStr) {
       throw new InvariantError('Akses ditolak. Jurnal hari-hari sebelumnya tidak dapat dihapus.');
     }
 

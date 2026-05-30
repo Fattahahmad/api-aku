@@ -4,13 +4,13 @@ import pool from '../config/database.js';
 export const getWeeklyMoodTrend = async (userId) => {
   const query = `
     SELECT 
-      TO_CHAR(created_at, 'Dy') AS day_name,
-      DATE(created_at) AS log_date,
+      TO_CHAR(created_at + INTERVAL '7 hours', 'Dy') AS day_name,
+      (created_at + INTERVAL '7 hours')::date AS log_date,
       ROUND(AVG(mood_score), 1) AS avg_score
     FROM daily_logs
     WHERE user_id = $1 
-      AND created_at >= CURRENT_DATE - INTERVAL '7 days'
-    GROUP BY DATE(created_at), TO_CHAR(created_at, 'Dy')
+      AND created_at + INTERVAL '7 hours' >= (CURRENT_DATE - INTERVAL '7 days')
+    GROUP BY (created_at + INTERVAL '7 hours')::date, TO_CHAR(created_at + INTERVAL '7 hours', 'Dy')
     ORDER BY log_date ASC;
   `;
   const result = await pool.query(query, [userId]);
@@ -29,7 +29,7 @@ export const getWeeklyEmotionDistribution = async (userId) => {
       COUNT(*) as count
     FROM daily_logs
     WHERE user_id = $1 
-      AND created_at >= CURRENT_DATE - INTERVAL '7 days'
+      AND created_at + INTERVAL '7 hours' >= (CURRENT_DATE - INTERVAL '7 days')
     GROUP BY mood_score
     ORDER BY mood_score ASC;
   `;

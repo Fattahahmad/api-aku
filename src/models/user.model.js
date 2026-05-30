@@ -48,15 +48,27 @@ export const updateUserStreak = async (userId) => {
     SET 
       current_streak = CASE 
         WHEN last_checkin_date IS NULL THEN 1
-        WHEN last_checkin_date = (CURRENT_DATE - INTERVAL '1 day') AT TIME ZONE 'Asia/Jakarta' THEN current_streak + 1
-        WHEN last_checkin_date = CURRENT_DATE AT TIME ZONE 'Asia/Jakarta' THEN current_streak
+        WHEN last_checkin_date = CURRENT_DATE - INTERVAL '1 day' THEN current_streak + 1
+        WHEN last_checkin_date = CURRENT_DATE THEN current_streak
         ELSE 1
       END,
-      last_checkin_date = CURRENT_DATE AT TIME ZONE 'Asia/Jakarta',
+      last_checkin_date = CURRENT_DATE,
       updated_at = NOW()
     WHERE id = $1
     RETURNING current_streak, last_checkin_date;
   `;
   const result = await pool.query(query, [userId]);
   return result.rows[0];
+};
+
+export const resetUserStreak = async (userId) => {
+  const query = `
+    UPDATE users 
+    SET 
+      current_streak = 0,
+      last_checkin_date = NULL,
+      updated_at = NOW()
+    WHERE id = $1;
+  `;
+  await pool.query(query, [userId]);
 };

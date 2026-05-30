@@ -1,5 +1,11 @@
 import pool from '../config/database.js';
 
+const getWIBDate = () => {
+  const now = new Date();
+  const wibTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+  return wibTime.toISOString().split('T')[0];
+};
+
 export const createDailyLog = async (userId, moodScore, journalText) => {
   const query = `
     INSERT INTO daily_logs (user_id, mood_score, journal_text) 
@@ -11,24 +17,39 @@ export const createDailyLog = async (userId, moodScore, journalText) => {
 };
 
 export const checkLogToday = async (userId) => {
+  const now = new Date();
+  const utcMidnight = new Date(now);
+  utcMidnight.setUTCHours(0, 0, 0, 0);
+  
+  const utcNextDay = new Date(utcMidnight);
+  utcNextDay.setUTCDate(utcNextDay.getUTCDate() + 1);
+  
   const query = `
-    SELECT * FROM daily_logs 
+    SELECT id, user_id, mood_score, journal_text, created_at, updated_at
+    FROM daily_logs 
     WHERE user_id = $1 
-      AND (created_at AT TIME ZONE 'Asia/Jakarta')::date = (CURRENT_DATE AT TIME ZONE 'Asia/Jakarta')::date;
+      AND created_at >= $2 
+      AND created_at < $3;
   `;
-  const result = await pool.query(query, [userId]);
-  return result.rows[0];
+  const result = await pool.query(query, [userId, utcMidnight, utcNextDay]);
+  
+  const todayWIB = getWIBDate();
+  return result.rows.find(log => {
+    const logDateUTC = new Date(log.created_at);
+    const logWIB = new Date(logDateUTC.getTime() + (7 * 60 * 60 * 1000));
+    return logWIB.toISOString().split('T')[0] === todayWIB;
+  });
 };
 
 export const getMonthlyLogs = async (userId, month, year) => {
   const query = `
     SELECT 
-      (created_at AT TIME ZONE 'Asia/Jakarta')::date as log_date, 
+      (created_at + INTERVAL '7 hours')::date as log_date, 
       mood_score
     FROM daily_logs 
     WHERE user_id = $1 
-      AND EXTRACT(MONTH FROM created_at AT TIME ZONE 'Asia/Jakarta') = $2 
-      AND EXTRACT(YEAR FROM created_at AT TIME ZONE 'Asia/Jakarta') = $3
+      AND EXTRACT(MONTH FROM (created_at + INTERVAL '7 hours')) = $2 
+      AND EXTRACT(YEAR FROM (created_at + INTERVAL '7 hours')) = $3
     ORDER BY created_at ASC;
   `;
   const result = await pool.query(query, [userId, month, year]);
