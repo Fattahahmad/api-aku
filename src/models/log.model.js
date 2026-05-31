@@ -16,22 +16,58 @@ export const createDailyLog = async (userId, moodScore, journalText) => {
   return result.rows[0];
 };
 
+export const updateLogEmotion = async (logId, emotionLabel) => {
+  const query = `
+    UPDATE daily_logs 
+    SET emotion_label = $1, updated_at = NOW() 
+    WHERE id = $2 
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [emotionLabel, logId]);
+  return result.rows[0];
+};
+
+export const getLogsForWeeklyAnalysis = async (userId, weekStart, weekEnd) => {
+  const query = `
+    SELECT 
+      DATE(created_at + INTERVAL '7 hours') as log_date,
+      emotion_label,
+      mood_score
+    FROM daily_logs
+    WHERE user_id = $1 
+      AND DATE(created_at + INTERVAL '7 hours') >= $2
+      AND DATE(created_at + INTERVAL '7 hours') <= $3
+    ORDER BY created_at ASC;
+  `;
+  const result = await pool.query(query, [userId, weekStart, weekEnd]);
+  return result.rows;
+};
+
 export const checkLogToday = async (userId) => {
   const now = new Date();
-  const utcMidnight = new Date(now);
-  utcMidnight.setUTCHours(0, 0, 0, 0);
+  const utcHours = now.getUTCHours();
+  const wibHours = utcHours + 7;
   
-  const utcNextDay = new Date(utcMidnight);
-  utcNextDay.setUTCDate(utcNextDay.getUTCDate() + 1);
+  const utcMidnightWIB = new Date(now);
+  utcMidnightWIB.setUTCHours(17, 0, 0, 0);
+  
+  if (wibHours >= 24) {
+    utcMidnightWIB.setUTCDate(utcMidnightWIB.getUTCDate() + 1);
+  } else if (utcHours < 17) {
+    utcMidnightWIB.setUTCDate(utcMidnightWIB.getUTCDate() - 1);
+  }
+  
+  const utcNextDayWIB = new Date(utcMidnightWIB);
+  utcNextDayWIB.setUTCDate(utcNextDayWIB.getUTCDate() + 1);
   
   const query = `
-    SELECT id, user_id, mood_score, journal_text, created_at, updated_at
+    SELECT id, user_id, mood_score, journal_text, created_at, emotion_label
     FROM daily_logs 
     WHERE user_id = $1 
       AND created_at >= $2 
       AND created_at < $3;
   `;
-  const result = await pool.query(query, [userId, utcMidnight, utcNextDay]);
+  const result = await pool.query(query, [userId, utcMidnightWIB, utcNextDayWIB]);
   
   const todayWIB = getWIBDate();
   return result.rows.find(log => {

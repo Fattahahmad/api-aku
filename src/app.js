@@ -6,6 +6,7 @@ import logRoutes from './routes/log.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import insightRoutes from './routes/insight.routes.js';
 import userRoutes from './routes/user.routes.js';
+import schedulerRoutes from './routes/scheduler.routes.js';
 import path from 'path';
 
 const app = express();
@@ -33,6 +34,7 @@ app.use('/api/v1/logs', logRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/insights', insightRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/scheduler', schedulerRoutes);
 
 app.use(errorHandler);
 

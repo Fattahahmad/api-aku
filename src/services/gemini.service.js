@@ -11,7 +11,7 @@ const getMoodLabel = (score) => {
 };
 
 export const generateDailySuggestion = async (moodScore, journalText) => {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
   
   const moodLabel = getMoodLabel(moodScore);
   const prompt = `Berikan 1-2 kalimat suggestion dalam bahasa Indonesia untuk user yang sedang memiliki mood "${moodLabel}" dengan jurnal: "${journalText || 'tidak ada jurnal'}". Fokus pada afirmasi atau aktivitas positif yang sesuai. Maksimal 20 kata.`;
