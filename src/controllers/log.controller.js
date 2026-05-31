@@ -20,7 +20,7 @@ export const createLog = async (req, res, next) => {
     const streakResult = await userModel.updateUserStreak(userId);
     
     const hfEmotion = await hfService.analyzeDailyEmotion(journal_text || '');
-    if (hfEmotion && hfEmotion.emotion && hfEmotion.emotion !== 'netral') {
+    if (hfEmotion && hfEmotion.emotion) {
       await logModel.updateLogEmotion(newLog.id, hfEmotion.emotion);
       await aiModel.createAIAnalysis(userId, newLog.id, 'daily', hfEmotion.emotion, hfEmotion.confidence);
     }

@@ -1,5 +1,4 @@
 import * as insightModel from '../models/insight.model.js';
-import * as logModel from '../models/log.model.js';
 import * as aiModel from '../models/ai_analyses.model.js';
 import * as geminiService from '../services/gemini.service.js';
 import * as hfService from '../services/hf.service.js';
@@ -32,26 +31,21 @@ export const getWeeklyInsights = async (req, res, next) => {
 
     const now = new Date();
     const wibNow = new Date(now.getTime() + (7 * 60 * 60 * 1000));
-    const weekStart = new Date(wibNow);
-    weekStart.setDate(weekStart.getDate() - 7);
+    const weekStart = new Date(wibNow.getTime() - 7 * 24 * 60 * 60 * 1000);
     
     const aiAnalyses = await aiModel.getWeeklyAIAnalyses(
-      userId, 
+      userId,
       weekStart.toISOString().split('T')[0],
       wibNow.toISOString().split('T')[0]
     );
-    
+
     const weeklyLogs = aiAnalyses.length > 0
       ? aiAnalyses.map(a => ({
           date: a.created_at.toISOString().split('T')[0],
           emotion: a.emotion,
-          confidence: parseFloat(a.confidence)
+          confidence: parseFloat(a.confidence) || 0.5
         }))
-      : formattedTrend.map(t => ({
-          date: t.date,
-          emotion: t.score >= 4 ? 'senang' : t.score >= 2 ? 'netral' : 'sedih',
-          confidence: 0.7
-        }));
+      : [];
 
     const hfSummary = await hfService.generateWeeklySummaryFromHF(weeklyLogs);
     const aiSummary = hfSummary || await geminiService.generateWeeklySummary(avgScore, emotionDistribution);
