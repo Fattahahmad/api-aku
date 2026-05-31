@@ -15,7 +15,8 @@ export const getWeeklyAIAnalyses = async (userId, startDate, endDate) => {
     SELECT emotion, confidence, created_at
     FROM ai_analyses
     WHERE user_id = $1 AND input_type = 'daily'
-      AND created_at >= $2 AND created_at <= $3
+      AND (created_at + INTERVAL '7 hours')::date >= $2
+      AND (created_at + INTERVAL '7 hours')::date <= $3
     ORDER BY created_at ASC;
   `;
   const result = await pool.query(query, [userId, startDate, endDate]);
