@@ -1,25 +1,15 @@
 import express from 'express';
+import { processWeeklySummary } from '../controllers/scheduler.controller.js';
 import { triggerWeeklyForScheduler } from '../jobs/hf-scheduler.js';
 import { processHFQueueHandler } from '../jobs/hf-worker.js';
+import { verifyQStashSignature } from '../middlewares/qstash.middleware.js';
 
 const router = express.Router();
 
-router.post('/weekly-summary', async (req, res, next) => {
-  try {
-    const authHeader = req.header('Authorization');
-    const expected = process.env.QSTASH_CURRENT_SIGNING_KEY;
-    
-    if (!authHeader || authHeader !== `Bearer ${expected}`) {
-      return res.status(401).json({ status: 'fail', message: 'Unauthorized' });
-    }
-    
-    await triggerWeeklyForScheduler();
-    res.status(200).json({ status: 'success', message: 'Weekly summary processed' });
-  } catch (error) {
-    next(error);
-  }
-});
+// Endpoint untuk QStash scheduler - weekly summary
+router.post('/weekly-summary', verifyQStashSignature, processWeeklySummary);
 
-router.post('/process-hf', processHFQueueHandler);
+// Endpoint untuk QStash scheduler - HF queue worker
+router.post('/process-hf', verifyQStashSignature, processHFQueueHandler);
 
 export default router;
