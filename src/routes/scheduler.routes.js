@@ -1,5 +1,6 @@
 import express from 'express';
 import { triggerWeeklyForScheduler } from '../jobs/hf-scheduler.js';
+import { processHFQueueHandler } from '../jobs/hf-worker.js';
 
 const router = express.Router();
 
@@ -18,5 +19,7 @@ router.post('/weekly-summary', async (req, res, next) => {
     next(error);
   }
 });
+
+router.post('/process-hf', processHFQueueHandler);
 
 export default router;

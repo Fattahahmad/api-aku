@@ -4,6 +4,7 @@ import * as userModel from '../models/user.model.js';
 import * as geminiService from '../services/gemini.service.js';
 import * as hfService from '../services/hf.service.js';
 import * as aiModel from '../models/ai_analyses.model.js';
+import { queueHFPrediction } from '../services/redis.service.js';
 import InvariantError from '../exceptions/InvariantError.js';
 import NotFoundError from '../exceptions/NotFoundError.js';
 
@@ -19,11 +20,8 @@ export const createLog = async (req, res, next) => {
     const newLog = await logModel.createDailyLog(userId, mood_score, journal_text);
     const streakResult = await userModel.updateUserStreak(userId);
     
-    const hfEmotion = await hfService.analyzeDailyEmotion(journal_text || '');
-    if (hfEmotion && hfEmotion.emotion) {
-      await logModel.updateLogEmotion(newLog.id, hfEmotion.emotion);
-      await aiModel.createAIAnalysis(userId, newLog.id, 'daily', hfEmotion.emotion, hfEmotion.confidence);
-    }
+    // Queue HF analysis - non-blocking
+    queueHFPrediction(userId, newLog.id, journal_text || '');
     
     const suggestion = await geminiService.generateDailySuggestion(mood_score, journal_text);
 
@@ -31,10 +29,9 @@ export const createLog = async (req, res, next) => {
       status: 'success',
       message: 'Jurnal harian berhasil disimpan!',
       data: { 
-        log: { ...newLog, emotion_label: hfEmotion.emotion },
+        log: newLog,
         suggestion,
-        streak: streakResult.current_streak,
-        ai_analysis: hfEmotion
+        streak: streakResult.current_streak
       },
     });
   } catch (error) {
