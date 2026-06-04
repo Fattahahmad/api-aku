@@ -23,7 +23,7 @@ export const createLog = async (req, res, next) => {
     // Queue HF analysis - non-blocking
     queueHFPrediction(userId, newLog.id, journal_text || '');
     
-    const suggestion = await geminiService.generateDailySuggestion(mood_score, journal_text);
+    const suggestion = await geminiService.generateDailySuggestion(mood_score, journal_text, userId);
 
     res.status(201).json({
       status: 'success',

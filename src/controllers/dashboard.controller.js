@@ -28,7 +28,8 @@ export const getSummary = async (req, res, next) => {
     const aiInsight = await geminiService.generateDashboardInsight(
       stats.totalCheckins, 
       stats.averageMood, 
-      recentEmotionTrend
+      recentEmotionTrend,
+      userId
     );
 
     res.status(200).json({

@@ -48,7 +48,7 @@ export const getWeeklyInsights = async (req, res, next) => {
       : [];
 
     const hfSummary = await hfService.generateWeeklySummaryFromHF(weeklyLogs);
-    const aiSummary = hfSummary || await geminiService.generateWeeklySummary(avgScore, emotionDistribution);
+    const aiSummary = hfSummary || await geminiService.generateWeeklySummary(avgScore, emotionDistribution, userId);
 
     res.status(200).json({
       status: 'success',
