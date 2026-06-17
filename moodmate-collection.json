@@ -1,86 +1,281 @@
 {
   "info": {
-    "name": "app.js",
+    "name": "MoodMate API - Habit Tracker",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "bearerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "habitId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "completionDate",
+      "value": "2026-06-13",
+      "type": "string"
+    },
+    {
+      "key": "fromDate",
+      "value": "2026-06-07",
+      "type": "string"
+    },
+    {
+      "key": "toDate",
+      "value": "2026-06-13",
+      "type": "string"
+    }
+  ],
   "item": [
     {
-      "name": "/",
+      "name": "Habits",
       "item": [
         {
-          "name": "GET /",
+          "name": "GET /habits",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/",
+              "raw": "{{baseUrl}}/habits",
               "host": [
-                "{{baseUrl}}"
-              ],
-              "path": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "api",
-      "item": [
-        {
-          "name": "GET /api/v1",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1"
+                "{{baseUrl}}",
+                "habits"
               ]
             }
           }
-        }
-      ]
-    },
-    {
-      "name": "register",
-      "item": [
+        },
         {
-          "name": "POST /register",
+          "name": "POST /habits",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Olahraga ringan 15 menit\",\n  \"description\": \"Stretching atau jalan pagi\",\n  \"targetDate\": \"2026-06-30\"\n}"
+            },
             "url": {
-              "raw": "{{baseUrl}}/register",
+              "raw": "{{baseUrl}}/habits",
               "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "register"
+                "{{baseUrl}}",
+                "habits"
               ]
             }
           }
-        }
-      ]
-    },
-    {
-      "name": "login",
-      "item": [
+        },
         {
-          "name": "POST /login",
+          "name": "PATCH /habits/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Olahraga ringan 20 menit\",\n  \"description\": \"Stretching, jalan pagi, atau yoga ringan\",\n  \"targetDate\": \"2026-06-30\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/habits/{{habitId}}",
+              "host": [
+                "{{baseUrl}}",
+                "habits",
+                "{{habitId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /habits/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/habits/{{habitId}}",
+              "host": [
+                "{{baseUrl}}",
+                "habits",
+                "{{habitId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /habits/:id/completions",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-06-13\",\n  \"note\": \"Hari ini berhasil\"\n}"
+            },
             "url": {
-              "raw": "{{baseUrl}}/login",
+              "raw": "{{baseUrl}}/habits/{{habitId}}/completions",
               "host": [
-                "{{baseUrl}}"
+                "{{baseUrl}}",
+                "habits",
+                "{{habitId}}",
+                "completions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /habits/:id/completions",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/habits/{{habitId}}/completions?date={{completionDate}}",
+              "host": [
+                "{{baseUrl}}",
+                "habits",
+                "{{habitId}}",
+                "completions"
               ],
-              "path": [
-                "login"
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{completionDate}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /habits/:id/completions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/habits/{{habitId}}/completions?from={{fromDate}}&to={{toDate}}",
+              "host": [
+                "{{baseUrl}}",
+                "habits",
+                "{{habitId}}",
+                "completions"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{fromDate}}"
+                },
+                {
+                  "key": "to",
+                  "value": "{{toDate}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /habits/summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/habits/summary?from={{fromDate}}&to={{toDate}}",
+              "host": [
+                "{{baseUrl}}",
+                "habits",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{fromDate}}"
+                },
+                {
+                  "key": "to",
+                  "value": "{{toDate}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /habits/insights",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/habits/insights?from={{fromDate}}&to={{toDate}}",
+              "host": [
+                "{{baseUrl}}",
+                "habits",
+                "insights"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{fromDate}}"
+                },
+                {
+                  "key": "to",
+                  "value": "{{toDate}}"
+                }
               ]
             }
           }

@@ -14,6 +14,7 @@ MoodMate membantu pengguna mencatat mood harian, menganalisis emosi dengan AI, d
 - **AI Analisis** - Deteksi emosi via HuggingFace
 - **Weekly Summary** - Ringkasan mingguan via HuggingFace
 - **Dashboard** - Statistik mood + insight AI
+- **Habit Tracker** - CRUD habit, completion, streak, completion rate, dan summary
 - **Redis Cache** - Cache emotion analysis (optional)
 - **Scheduler** - Weekly summary otomatis via QStash
 
@@ -84,11 +85,13 @@ src/
 │   ├── auth.controller.js     # Auth endpoints
 │   ├── user.controller.js       # User profile
 │   ├── log.controller.js        # Daily check-in
+│   ├── habit.controller.js      # Habit tracker
 │   ├── insight.controller.js    # Weekly insights
 │   └── dashboard.controller.js    # Dashboard summary
 ├── models/
 │   ├── user.model.js            # User queries
 │   ├── log.model.js             # Log queries
+│   ├── habit.model.js           # Habit and completion queries
 │   ├── insight.model.js         # Insight queries
 │   ├── dashboard.model.js       # Dashboard queries
 │   └── ai_analyses.model.js     # AI analysis storage
@@ -96,6 +99,7 @@ src/
 │   ├── auth.routes.js           # /api/v1/auth
 │   ├── user.routes.js           # /api/v1/users
 │   ├── log.routes.js            # /api/v1/logs
+│   ├── habit.routes.js          # /api/v1/habits
 │   ├── insight.routes.js        # /api/v1/insights
 │   └── scheduler.routes.js      # /api/v1/scheduler
 ├── services/
@@ -136,6 +140,17 @@ src/
 - `DELETE /api/v1/logs/:id` - Delete log
 - `GET /api/v1/logs` - History with pagination
 
+### Habits
+- `GET /api/v1/habits` - List habit milik user
+- `POST /api/v1/habits` - Buat habit baru
+- `PATCH /api/v1/habits/:id` - Edit habit
+- `DELETE /api/v1/habits/:id` - Hapus habit
+- `POST /api/v1/habits/:id/completions` - Tandai habit selesai
+- `DELETE /api/v1/habits/:id/completions?date=YYYY-MM-DD` - Batalkan completion
+- `GET /api/v1/habits/:id/completions?from=YYYY-MM-DD&to=YYYY-MM-DD` - History completion habit
+- `GET /api/v1/habits/summary?from=YYYY-MM-DD&to=YYYY-MM-DD` - Summary habit global
+- `GET /api/v1/habits/insights?from=YYYY-MM-DD&to=YYYY-MM-DD` - Insight per habit
+
 ### Dashboard
 - `GET /api/v1/dashboard/summary` - Statistik + AI insight
 
@@ -163,6 +178,16 @@ src/
 - `getMonthlyLogs(userId, month, year)` - Ambil log 1 bulan
 - `getLogByDate(userId, dateString)` - Log spesifik tanggal
 
+#### habit.model.js
+- `getHabits(userId)` - List habit user
+- `createHabit(userId, title, description, targetDate)` - Buat habit baru
+- `updateHabit(userId, habitId, title, description, targetDate)` - Edit habit
+- `deleteHabit(userId, habitId)` - Hapus habit
+- `createCompletion(userId, habitId, completedAt, note)` - Tandai habit selesai
+- `deleteCompletion(userId, habitId, completedAt)` - Batalkan completion
+- `getHabitSummary(userId, from, to)` - Summary global habit
+- `getHabitInsights(userId, from, to)` - Insight per habit
+
 #### ai_analyses.model.js
 - `createAIAnalysis(userId, logId, inputType, emotion, confidence)` - Simpan hasil AI
 - `getWeeklyAIAnalyses(userId, startDate, endDate)` - Ambil data untuk weekly summary
@@ -187,6 +212,11 @@ src/
 
 #### log.controller.js
 - `createLog` - Buat log + panggil HF + simpan ke `ai_analyses` + return suggestion Gemini
+
+#### habit.controller.js
+- `createHabit`, `updateHabit`, `deleteHabit` - CRUD habit
+- `createCompletion`, `deleteCompletion` - Tandai dan batalkan completion
+- `getHabitSummary`, `getHabitInsights` - Summary dan insight habit
 
 #### insight.controller.js
 - `getWeeklyInsights` - Query trend + emotion + ai_analyses → kirim ke HF weekly
