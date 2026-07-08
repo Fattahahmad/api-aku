@@ -62,14 +62,20 @@ const getMoodLabel = (score) => {
   return labels[score] || 'netral';
 };
 
-export const generateDailySuggestion = async (moodScore, journalText, userId) => {
+const getDefaultSuggestion = (emotion) => {
+  const lower = emotion.toLowerCase();
+  if (lower.includes('joy') || lower.includes('trust')) return "Pertahankan energi positif ini! Lanjutkan kebiasaan baik.";
+  if (lower.includes('surprise') || lower.includes('anticipation')) return "Raih harapan baru dengan langkah kecil.";
+  return "Sedikit napas dalam dan ingatlah ini akan berlalu. Kamu kuat.";
+};
+
+export const generateDailySuggestion = async (emotion, intensity, journalText, userId) => {
   const cacheKey = getCacheKey('daily_suggestion', userId);
   const cached = await getGeminiCache(cacheKey);
   if (cached) return cached;
 
   const model = getModelWithFallback();
-  const moodLabel = getMoodLabel(moodScore);
-  const prompt = `Berikan 1-2 kalimat suggestion dalam bahasa Indonesia untuk user yang sedang memiliki mood "${moodLabel}" dengan jurnal: "${journalText || 'tidak ada jurnal'}". Fokus pada afirmasi atau aktivitas positif yang sesuai. Maksimal 20 kata.`;
+  const prompt = `Berikan 1-2 kalimat suggestion dalam bahasa Indonesia untuk user yang sedang merasakan "${emotion}" dengan intensitas ${intensity}/10. Jurnal: "${journalText || 'tidak ada jurnal'}". Fokus pada afirmasi atau aktivitas positif yang sesuai. Maksimal 20 kata.`;
 
   try {
     const result = await model.generateContent(prompt);
@@ -79,42 +85,40 @@ export const generateDailySuggestion = async (moodScore, journalText, userId) =>
     return text;
   } catch (error) {
     console.error('Gemini suggestion error:', error.message);
-    const defaultText = getDefaultSuggestion(moodScore);
+    const defaultText = getDefaultSuggestion(emotion);
     await setGeminiCache(cacheKey, defaultText);
     return defaultText;
   }
 };
 
-export const generateWeeklySummary = async (averageScore, emotionDistribution, userId) => {
-  const cacheKey = getCacheKey('weekly_summary', userId);
+export const generateWeeklyFIDSummary = async (fidPrompt, userId) => {
+  const cacheKey = getCacheKey('weekly_fid_summary', userId);
   const cached = await getGeminiCache(cacheKey);
   if (cached) return cached;
 
   const model = getModelWithFallback();
-  const emotions = emotionDistribution.map(e => e.emotion_label || e.emotion).join(', ') || 'tidak ada data';
-  const prompt = `Ringkas dalam 2-3 kalimat bahasa Indonesia: user memiliki rata-rata mood ${averageScore}/5 dengan distribusi emosi: ${emotions}. Berikan insight dan saran. Maksimal 30 kata.`;
-
   try {
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent(fidPrompt);
     const response = await result.response;
     const text = response.text().trim();
     await setGeminiCache(cacheKey, text);
     return text;
   } catch (error) {
-    console.error('Gemini weekly summary error:', error.message);
-    const defaultText = getDefaultWeeklySummary(averageScore);
+    console.error('Gemini FID weekly summary error:', error.message);
+    const defaultText = "Minggu ini pantau emosi dengan lebih konsisten. Terus semangat ya.";
     await setGeminiCache(cacheKey, defaultText);
     return defaultText;
   }
 };
 
-export const generateDashboardInsight = async (totalCheckins, averageMood, emotionTrend, userId) => {
+export const generateDashboardInsight = async (totalCheckins, avgFidScore, fidTrend, userId) => {
   const cacheKey = getCacheKey('dashboard_insight', userId);
   const cached = await getGeminiCache(cacheKey);
   if (cached) return cached;
 
   const model = getModelWithFallback();
-  const prompt = `Buat insight singkat bahasa Indonesia (maksimal 25 kata) berdasarkan: ${totalCheckins} total check-in, rata-rata mood ${averageMood}/5, tren emosi terbaru: ${emotionTrend}. Fokus pada pola positif dan saran untuk dilanjutkan.`;
+  const topEmotions = fidTrend.slice(0, 3).map(e => e.emotion).join(', ') || 'belum ada data';
+  const prompt = `Buat insight singkat bahasa Indonesia (maksimal 25 kata) berdasarkan: ${totalCheckins} total check-in, rata-rata FID score ${avgFidScore}, emosi terakhir: ${topEmotions}. Fokus pada pola positif.`;
 
   try {
     const result = await model.generateContent(prompt);
@@ -128,16 +132,4 @@ export const generateDashboardInsight = async (totalCheckins, averageMood, emoti
     await setGeminiCache(cacheKey, defaultText);
     return defaultText;
   }
-};
-
-const getDefaultSuggestion = (moodScore) => {
-  if (moodScore >= 4) return "Pertahankan energi positif ini! Terus nikmati hari yang indah.";
-  if (moodScore >= 2) return "Coba lakukan aktivitas kecil yang disukai untuk menyegarkan mood.";
-  return "Sedikit napas dalam dan ingatlah ini akan berlalu. Kamu kuat.";
-};
-
-const getDefaultWeeklySummary = (averageScore) => {
-  if (averageScore >= 4) return "Minggu ini mood terkendali positif. Pertahankan kebiasaan baik ini.";
-  if (averageScore >= 2) return "Ada fluktuasi mood minggu ini. Coba rutinitas yang menstabilkan.";
-  return "Minggu ini terasa berat. Besok pasti lebih baik, semangat ya.";
 };

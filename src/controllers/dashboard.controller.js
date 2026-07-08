@@ -2,6 +2,7 @@ import * as dashboardModel from '../models/dashboard.model.js';
 import * as userModel from '../models/user.model.js';
 import * as logModel from '../models/log.model.js';
 import * as geminiService from '../services/gemini.service.js';
+import * as fidService from '../services/fid.service.js';
 
 export const getSummary = async (req, res, next) => {
   try {
@@ -9,37 +10,35 @@ export const getSummary = async (req, res, next) => {
     const [stats, user, recentLogs] = await Promise.all([
       dashboardModel.getDashboardStats(userId),
       userModel.findUserById(userId),
-      logModel.getRecentEmotionTrend(userId, 5)
+      logModel.getRecentFIDTrend(userId, 5)
     ]);
-    
-    let moodLabel = "Tidak ada data";
-    if (stats.totalCheckins > 0) {
-      if (stats.averageMood >= 4) moodLabel = "Sangat senang";
-      else if (stats.averageMood >= 3) moodLabel = "Senang";
-      else if (stats.averageMood >= 2) moodLabel = "Netral";
-      else if (stats.averageMood >= 1) moodLabel = "Sedih";
-      else moodLabel = "Sangat sedih";
-    }
 
-    const recentEmotionTrend = recentLogs.length > 0
-      ? recentLogs.map(l => l.emotion_label || ['sangat sedih', 'sedih', 'down', 'netral', 'senang', 'sangat senang'][l.mood_score]).join(', ')
-      : 'baru memulai';
+    const avgFidScore = recentLogs.length > 0
+      ? (recentLogs.reduce((sum, l) => sum + Number(l.fid_score || 0), 0) / recentLogs.length).toFixed(1)
+      : 0;
+
+    const recentEmotions = recentLogs.map(l => ({
+      emotion: l.emotion,
+      intensity: Number(l.intensity) || 0,
+      duration: Number(l.duration) || 0,
+      fid_score: Number(l.fid_score) || 0
+    }));
 
     const aiInsight = await geminiService.generateDashboardInsight(
-      stats.totalCheckins, 
-      stats.averageMood, 
-      recentEmotionTrend,
+      stats.totalCheckins,
+      avgFidScore,
+      recentEmotions,
       userId
     );
 
     res.status(200).json({
       status: 'success',
       data: {
-        user_name: user.name.split(' ')[0], 
+        user_name: user.name.split(' ')[0],
         total_checkins: stats.totalCheckins,
-        average_mood_score: stats.averageMood,
-        average_mood_label: moodLabel,
+        average_fid_score: avgFidScore,
         current_streak: user.current_streak || 0,
+        recent_emotions: recentEmotions,
         recent_insight: aiInsight
       }
     });

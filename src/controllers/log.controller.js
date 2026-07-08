@@ -2,28 +2,24 @@
 import * as logModel from '../models/log.model.js';
 import * as userModel from '../models/user.model.js';
 import * as geminiService from '../services/gemini.service.js';
-import * as hfService from '../services/hf.service.js';
-import * as aiModel from '../models/ai_analyses.model.js';
-import { queueHFPrediction } from '../services/redis.service.js';
 import InvariantError from '../exceptions/InvariantError.js';
 import NotFoundError from '../exceptions/NotFoundError.js';
+import * as fidService from '../services/fid.service.js';
 
 export const createLog = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { mood_score, journal_text } = req.body;
+    const { emotion, intensity, duration, journal_text } = req.body;
     const existingLog = await logModel.checkLogToday(userId);
     if (existingLog) {
       throw new InvariantError('Anda sudah melakukan check-in hari ini. Silakan edit log yang tersedia jika ingin mengubah data.');
     }
 
-    const newLog = await logModel.createDailyLog(userId, mood_score, journal_text);
+    const newLog = await logModel.createDailyLog(userId, emotion, intensity, duration, journal_text);
     const streakResult = await userModel.updateUserStreak(userId);
-    
-    // Queue HF analysis - non-blocking
-    queueHFPrediction(userId, newLog.id, journal_text || '');
-    
-    const suggestion = await geminiService.generateDailySuggestion(mood_score, journal_text, userId);
+
+    const suggestion = await geminiService.generateDailySuggestion(emotion, intensity, journal_text, userId);
+    const fidScore = fidService.calculateFIDScore(intensity, duration);
 
     res.status(201).json({
       status: 'success',
@@ -31,7 +27,8 @@ export const createLog = async (req, res, next) => {
       data: { 
         log: newLog,
         suggestion,
-        streak: streakResult.current_streak
+        streak: streakResult.current_streak,
+        fid_score: fidScore
       },
     });
   } catch (error) {
@@ -102,8 +99,8 @@ export const getLogDetail = async (req, res, next) => {
 export const updateLog = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { id } = req.params; 
-    const { mood_score, journal_text } = req.body;
+    const { id } = req.params;
+    const { emotion, intensity, duration, journal_text } = req.body;
     const log = await logModel.getLogById(id);
     if (!log || log.user_id !== userId) {
       throw new NotFoundError('Log jurnal tidak ditemukan.');
@@ -112,16 +109,16 @@ export const updateLog = async (req, res, next) => {
     const logDateUTC = new Date(log.created_at);
     const logDateWIB = new Date(logDateUTC.getTime() + (7 * 60 * 60 * 1000));
     const logDateStr = logDateWIB.toISOString().split('T')[0];
-    
+
     const now = new Date();
     const todayWIB = new Date(now.getTime() + (7 * 60 * 60 * 1000));
     const todayStr = todayWIB.toISOString().split('T')[0];
-    
+
     if (logDateStr !== todayStr) {
       throw new InvariantError('Akses ditolak. Jurnal hari-hari sebelumnya tidak dapat diubah.');
     }
 
-    const updatedLog = await logModel.updateDailyLog(id, mood_score, journal_text);
+    const updatedLog = await logModel.updateDailyLog(id, emotion, intensity, duration, journal_text);
 
     res.status(200).json({
       status: 'success',

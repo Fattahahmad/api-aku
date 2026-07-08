@@ -4,18 +4,17 @@ Backend API untuk aplikasi pelacakan mood harian dengan analisis emosi berbasis 
 
 ## Deskripsi
 
-MoodMate membantu pengguna mencatat mood harian, menganalisis emosi dengan AI, dan memberikan insight serta rekomendasi personal.
+MoodMate membantu pengguna mencatat emosi harian berbasis FID (Frequency, Intensity, Duration) dengan teori 8 Core Emotions Robert Plutchik, dan memberikan insight serta rekomendasi personal via Gemini AI.
 
 ## Fitur Utama
 
 - **Autentikasi** - Register, login dengan JWT
-- **Check-in Harian** - Input mood (0-5) + jurnal
+- **Check-in Harian FID** - Pilih dari 8 emosi Plutchik + intensity (1-10) + duration (1-3) + jurnal
 - **Streak Tracking** - Hitung konsistensi check-in harian
-- **AI Analisis** - Deteksi emosi via HuggingFace
-- **Weekly Summary** - Ringkasan mingguan via HuggingFace
-- **Dashboard** - Statistik mood + insight AI
+- **Dashboard FID** - Statistik FID score + insight AI
+- **Weekly Insights FID** - Agregasi Frequency/Intensity/Duration + summary AI
 - **Habit Tracker** - CRUD habit, completion, streak, completion rate, dan summary
-- **Redis Cache** - Cache emotion analysis (optional)
+- **Redis Cache** - Cache AI response (optional)
 - **Scheduler** - Weekly summary otomatis via QStash
 
 ## Tech Stack
@@ -132,13 +131,24 @@ src/
 - `POST /api/v1/users/logout` - Logout
 
 ### Logs
-- `POST /api/v1/logs` - Create daily log (auto AI analysis)
+- `POST /api/v1/logs` - Create daily log (emotion, intensity, duration) + suggestion
 - `GET /api/v1/logs/today` - Check today status
 - `GET /api/v1/logs/calendar?month=X&year=Y` - Monthly calendar
 - `GET /api/v1/logs/date/:date` - Log by date
 - `PUT /api/v1/logs/:id` - Update log
 - `DELETE /api/v1/logs/:id` - Delete log
 - `GET /api/v1/logs` - History with pagination
+
+Payload POST /api/v1/logs:
+```json
+{
+  "emotion": "Joy",
+  "intensity": 8,
+  "duration": 2,
+  "journal_text": "Catatan pribadi"
+}
+```
+FID Score = intensity × duration
 
 ### Habits
 - `GET /api/v1/habits` - List habit milik user
@@ -173,10 +183,13 @@ src/
 - `updateUserStreak(userId)` - Update streak (logic terpisah hari)
 
 #### log.model.js
-- `createDailyLog(userId, moodScore, journalText)` - Buat log harian
+- `createDailyLog(userId, emotion, intensity, duration, journalText)` - Buat log FID harian
 - `checkLogToday(userId)` - Cek apakah sudah check-in
 - `getMonthlyLogs(userId, month, year)` - Ambil log 1 bulan
 - `getLogByDate(userId, dateString)` - Log spesifik tanggal
+- `getWeeklyFIDData(userId, weekStart, weekEnd)` - Ambil data FID mingguan
+- `getWeeklyFIDAggregation(userId, weekStart, weekEnd)` - Agregasi FID mingguan
+- `getRecentFIDTrend(userId, limit)` - Trend FID terbaru
 
 #### habit.model.js
 - `getHabits(userId)` - List habit user
@@ -194,14 +207,20 @@ src/
 
 ### Services
 
-#### hf.service.js
-- `analyzeDailyEmotion(journalText)` - POST ke HF daily endpoint, return `{emotion, confidence}`
-- `generateWeeklySummaryFromHF(weeklyLogs)` - POST array `[{date, emotion, confidence}]` ke HF weekly endpoint
+#### fid.service.js (BARU)
+- `calculateFIDScore(intensity, duration)` - Hitung FID score
+- `getWeeklyFIDData(userId, from, to)` - Ambil data FID mingguan
+- `aggregateWeeklyFID(logs)` - Agregasi F, I, D per emosi
+- `buildFIDPrompt(aggregates)` - Buat prompt untuk Gemini
 
 #### gemini.service.js
-- `generateDailySuggestion(moodScore, journalText)` - Buat rekomendasi harian
-- `generateWeeklySummary(averageScore, emotionDistribution)` - Buat ringkasan mingguan
-- `generateDashboardInsight(totalCheckins, averageMood, emotionTrend)` - AI insight dashboard
+- `generateDailySuggestion(emotion, intensity, journalText, userId)` - Buat rekomendasi harian
+- `generateWeeklyFIDSummary(fidPrompt, userId)` - Buat ringkasan FID mingguan
+- `generateDashboardInsight(totalCheckins, avgFidScore, fidTrend, userId)` - AI insight dashboard
+
+#### redis.service.js
+- `getRedisClient()` - Dapatkan Redis client
+- Cache sudah dipindahkan ke fid/gemini service
 
 #### redis.service.js
 - `cacheEmotionResult(journalText, emotion, confidence)` - Cache hasil emotion (24 jam)

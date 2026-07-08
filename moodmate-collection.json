@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "MoodMate API - Habit Tracker",
+    "name": "MoodMate API - FID Mood & Habit Tracker",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -21,7 +21,7 @@
     },
     {
       "key": "completionDate",
-      "value": "2026-06-13",
+      "value": "2026-07-08",
       "type": "string"
     },
     {
@@ -31,11 +31,73 @@
     },
     {
       "key": "toDate",
-      "value": "2026-06-13",
+      "value": "2026-07-08",
       "type": "string"
     }
   ],
   "item": [
+    {
+      "name": "Mood Logs (FID)",
+      "item": [
+        {
+          "name": "POST /logs - Create FID Log",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emotion\": \"Joy\",\n  \"intensity\": 8,\n  \"duration\": 2,\n  \"journal_text\": \"Hari ini ceria karena selesai tugas\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/logs",
+              "host": ["{{baseUrl}}", "logs"]
+            }
+          }
+        },
+        {
+          "name": "GET /logs/today",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/logs/today",
+              "host": ["{{baseUrl}}", "logs", "today"]
+            }
+          }
+        },
+        {
+          "name": "GET /insights/weekly",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/insights/weekly",
+              "host": ["{{baseUrl}}", "insights", "weekly"]
+            }
+          }
+        },
+        {
+          "name": "GET /dashboard/summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/summary",
+              "host": ["{{baseUrl}}", "dashboard", "summary"]
+            }
+          }
+        }
+      ]
+    },
     {
       "name": "Habits",
       "item": [
@@ -44,17 +106,11 @@
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearerToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
             ],
             "url": {
               "raw": "{{baseUrl}}/habits",
-              "host": [
-                "{{baseUrl}}",
-                "habits"
-              ]
+              "host": ["{{baseUrl}}", "habits"]
             }
           }
         },
@@ -63,25 +119,16 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearerToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Olahraga ringan 15 menit\",\n  \"description\": \"Stretching atau jalan pagi\",\n  \"targetDate\": \"2026-06-30\"\n}"
+              "raw": "{\n  \"title\": \"Olahraga ringan 15 menit\",\n  \"description\": \"Stretching atau jalan pagi\",\n  \"targetDate\": \"2026-07-30\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/habits",
-              "host": [
-                "{{baseUrl}}",
-                "habits"
-              ]
+              "host": ["{{baseUrl}}", "habits"]
             }
           }
         },
@@ -90,26 +137,16 @@
           "request": {
             "method": "PATCH",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearerToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Olahraga ringan 20 menit\",\n  \"description\": \"Stretching, jalan pagi, atau yoga ringan\",\n  \"targetDate\": \"2026-06-30\"\n}"
+              "raw": "{\n  \"title\": \"Olahraga ringan 20 menit\",\n  \"description\": \"Stretching, jalan pagi, atau yoga ringan\",\n  \"targetDate\": \"2026-07-30\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/habits/{{habitId}}",
-              "host": [
-                "{{baseUrl}}",
-                "habits",
-                "{{habitId}}"
-              ]
+              "host": ["{{baseUrl}}", "habits", "{{habitId}}"]
             }
           }
         },
@@ -118,18 +155,11 @@
           "request": {
             "method": "DELETE",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearerToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
             ],
             "url": {
               "raw": "{{baseUrl}}/habits/{{habitId}}",
-              "host": [
-                "{{baseUrl}}",
-                "habits",
-                "{{habitId}}"
-              ]
+              "host": ["{{baseUrl}}", "habits", "{{habitId}}"]
             }
           }
         },
@@ -138,27 +168,16 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearerToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"date\": \"2026-06-13\",\n  \"note\": \"Hari ini berhasil\"\n}"
+              "raw": "{\n  \"date\": \"{{completionDate}}\",\n  \"note\": \"Hari ini berhasil\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/habits/{{habitId}}/completions",
-              "host": [
-                "{{baseUrl}}",
-                "habits",
-                "{{habitId}}",
-                "completions"
-              ]
+              "host": ["{{baseUrl}}", "habits", "{{habitId}}", "completions"]
             }
           }
         },
@@ -167,56 +186,12 @@
           "request": {
             "method": "DELETE",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearerToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
             ],
             "url": {
               "raw": "{{baseUrl}}/habits/{{habitId}}/completions?date={{completionDate}}",
-              "host": [
-                "{{baseUrl}}",
-                "habits",
-                "{{habitId}}",
-                "completions"
-              ],
-              "query": [
-                {
-                  "key": "date",
-                  "value": "{{completionDate}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "GET /habits/:id/completions",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearerToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/habits/{{habitId}}/completions?from={{fromDate}}&to={{toDate}}",
-              "host": [
-                "{{baseUrl}}",
-                "habits",
-                "{{habitId}}",
-                "completions"
-              ],
-              "query": [
-                {
-                  "key": "from",
-                  "value": "{{fromDate}}"
-                },
-                {
-                  "key": "to",
-                  "value": "{{toDate}}"
-                }
-              ]
+              "host": ["{{baseUrl}}", "habits", "{{habitId}}", "completions"],
+              "query": [{ "key": "date", "value": "{{completionDate}}" }]
             }
           }
         },
@@ -225,57 +200,14 @@
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearerToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
             ],
             "url": {
               "raw": "{{baseUrl}}/habits/summary?from={{fromDate}}&to={{toDate}}",
-              "host": [
-                "{{baseUrl}}",
-                "habits",
-                "summary"
-              ],
+              "host": ["{{baseUrl}}", "habits", "summary"],
               "query": [
-                {
-                  "key": "from",
-                  "value": "{{fromDate}}"
-                },
-                {
-                  "key": "to",
-                  "value": "{{toDate}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "GET /habits/insights",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearerToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/habits/insights?from={{fromDate}}&to={{toDate}}",
-              "host": [
-                "{{baseUrl}}",
-                "habits",
-                "insights"
-              ],
-              "query": [
-                {
-                  "key": "from",
-                  "value": "{{fromDate}}"
-                },
-                {
-                  "key": "to",
-                  "value": "{{toDate}}"
-                }
+                { "key": "from", "value": "{{fromDate}}" },
+                { "key": "to", "value": "{{toDate}}" }
               ]
             }
           }
