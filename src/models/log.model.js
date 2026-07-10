@@ -7,7 +7,7 @@ const getWIBDate = () => {
 };
 
 export const createDailyLog = async (userId, emotion, intensity, duration, journalText) => {
-  const fidScore = intensity * duration;
+  const fidScore = intensity && duration ? intensity * duration : null;
   const query = `
     INSERT INTO daily_logs (user_id, emotion, intensity, duration, journal_text, fid_score) 
     VALUES ($1, $2, $3, $4, $5, $6) 
