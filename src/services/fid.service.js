@@ -1,28 +1,21 @@
-import pool from '../config/database.js';
-
 const DURATION_LABELS = { 1: '<1 jam', 2: 'setengah hari', 3: 'seharian penuh' };
-const FID_EMOTIONS = ['Joy', 'Sadness', 'Trust', 'Disgust', 'Fear', 'Anger', 'Surprise', 'Anticipation'];
+const EMOTION_INDONESIA = {
+  Joy: 'senang',
+  Sadness: 'sedih',
+  Trust: 'percaya',
+  Disgust: 'jijik',
+  Fear: 'takut',
+  Anger: 'marah',
+  Surprise: 'terkejut',
+  Anticipation: 'antisipasi'
+};
+
+export const getEmotionIndonesia = (emotionEn) => {
+  return EMOTION_INDONESIA[emotionEn] || emotionEn.toLowerCase();
+};
 
 export const calculateFIDScore = (intensity, duration) => {
   return intensity * duration;
-};
-
-export const getWeeklyFIDData = async (userId, from, to) => {
-  const query = `
-    SELECT 
-      emotion,
-      intensity,
-      duration,
-      fid_score,
-      created_at
-    FROM daily_logs
-    WHERE user_id = $1 
-      AND DATE(created_at + INTERVAL '7 hours') >= $2
-      AND DATE(created_at + INTERVAL '7 hours') <= $3
-    ORDER BY created_at ASC;
-  `;
-  const result = await pool.query(query, [userId, from, to]);
-  return result.rows;
 };
 
 export const aggregateWeeklyFID = (logs) => {
@@ -47,6 +40,7 @@ export const aggregateWeeklyFID = (logs) => {
 
   const result = Object.values(aggregation).map(item => ({
     emotion: item.emotion,
+    emotionId: getEmotionIndonesia(item.emotion),
     frequency: item.count,
     avgIntensity: item.count > 0 ? (item.totalIntensity / item.count).toFixed(1) : 0,
     avgDuration: item.count > 0 ? (item.totalDuration / item.count).toFixed(1) : 0,
@@ -62,22 +56,14 @@ export const buildFIDPrompt = (aggregates) => {
   }
 
   const topEmotion = aggregates[0];
+  const topEmotionId = topEmotion.emotionId;
   const durationLabel = DURATION_LABELS[Math.round(topEmotion.avgDuration)] || 'tidak diketahui';
 
-  let prompt = `Berdasarkan data mood 7 hari terakhir:\n`;
+  let prompt = `Berdasarkan data mood minggu ini (Sen-Minggu):\n`;
   aggregates.forEach(item => {
-    prompt += `- ${item.emotion}: frekuensi ${item.frequency}x/minggu, rata-rata intensitas ${item.avgIntensity}/10, rata-rata durasi ${item.avgDuration}\n`;
+    prompt += `- emosi ${item.emotionId}: muncul ${item.frequency}x, intensitas rata-rata ${item.avgIntensity}/10, durasi rata-rata ${item.avgDuration}\n`;
   });
-  prompt += `\nBerikan insight singkat (maksimal 30 kata) tentang emosi dominan user dan saran untuk menyeimbangkan seminggu depan.`;
+  prompt += `\nEmosi dominan adalah "${topEmotionId}" dengan intensitas ${topEmotion.avgIntensity}/10 dan durasi ${durationLabel}.\n\nBerikan dalam format berikut (gunakan bahasa Indonesia):\nSUMMARY: [tuliskan ringkasan narasi lengkap tentang pola emosi user, maksimal 60 kata]\nSARAN: [tuliskan saran kegiatan yang bisa dilakukan user untuk menyeimbangkan emosi ini, maksimal 40 kata]`;
 
   return prompt;
-};
-
-export const buildDashboardFIDPrompt = (totalLogs, avgIntensity, avgDuration, recentEmotions) => {
-  const avgFidScore = avgIntensity * avgDuration;
-  const emotionStr = recentEmotions.length > 0
-    ? recentEmotions.map(e => e.emotion).join(', ')
-    : 'belum ada data';
-
-  return `Buat insight singkat (maksimal 25 kata) berdasarkan: ${totalLogs} total check-in, rata-rata fid score ${avgFidScore.toFixed(1)}, emosi terakhir: ${emotionStr}. Fokus pada pola positif.`;
 };

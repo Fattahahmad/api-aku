@@ -18,7 +18,7 @@ export const getSummary = async (req, res, next) => {
       : 0;
 
     const recentEmotions = recentLogs.map(l => ({
-      emotion: l.emotion,
+      emotion: fidService.getEmotionIndonesia(l.emotion),
       intensity: Number(l.intensity) || 0,
       duration: Number(l.duration) || 0,
       fid_score: Number(l.fid_score) || 0
