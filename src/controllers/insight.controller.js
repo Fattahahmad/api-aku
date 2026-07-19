@@ -1,6 +1,6 @@
 import * as logModel from '../models/log.model.js';
-import * as geminiService from '../services/gemini.service.js';
 import * as fidService from '../services/fid.service.js';
+import * as insightModel from '../models/insight.model.js';
 
 const getWeekBoundaries = () => {
   const now = new Date();
@@ -8,7 +8,7 @@ const getWeekBoundaries = () => {
   const dayOfWeek = wibNow.getDay();
 
   const sundayWIB = new Date(wibNow);
-  sundayWIB.setDate(sundayWIB.getDate() - dayOfWeek);
+  sundayWIB.setDate(sundayWIB.getDate() + (7 - dayOfWeek));
   sundayWIB.setHours(0, 0, 0, 0);
 
   const mondayWIB = new Date(sundayWIB);
@@ -21,10 +21,30 @@ const getWeekBoundaries = () => {
   };
 };
 
+const TEMPLATE_SUMMARY = {
+  text: 'Summary minggu ini belum tersedia. Silakan tunggu hingga hari Minggu pukul 01:00 WIB.',
+  suggestion: 'Lanjutkan mencatat mood harian Anda. Summary akan otomatis ter-generate setiap akhir minggu.'
+};
+
 export const getWeeklyInsights = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { from, to, weekNumber } = getWeekBoundaries();
+
+    const weeklyInsight = await insightModel.getWeeklyInsightFromDB(userId, weekNumber);
+
+    if (!weeklyInsight) {
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          week_number: weekNumber,
+          week_range: { from, to },
+          mood_trend: [],
+          fid_aggregates: [],
+          summary: TEMPLATE_SUMMARY
+        }
+      });
+    }
 
     const trendData = await logModel.getWeeklyFIDData(userId, from, to);
 
@@ -36,8 +56,6 @@ export const getWeeklyInsights = async (req, res, next) => {
     }));
 
     const fidAggregates = fidService.aggregateWeeklyFID(trendData);
-    const fidPrompt = fidService.buildFIDPrompt(fidAggregates);
-    const aiSummary = await geminiService.generateWeeklyFIDSummary(fidPrompt, userId);
 
     res.status(200).json({
       status: 'success',
@@ -47,8 +65,8 @@ export const getWeeklyInsights = async (req, res, next) => {
         mood_trend: formattedTrend,
         fid_aggregates: fidAggregates,
         summary: {
-          text: aiSummary.text,
-          suggestion: aiSummary.suggestion
+          text: weeklyInsight.summary_text,
+          suggestion: ''
         }
       }
     });

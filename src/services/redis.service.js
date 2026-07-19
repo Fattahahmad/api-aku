@@ -42,3 +42,18 @@ export const incrementRateLimit = async (key, limit = 60) => {
 };
 
 export const getRedisClient = () => redisClient;
+
+export const clearWeeklySummaryCache = async (userId) => {
+  try {
+    const redis = getRedisClient();
+    if (redis) {
+      const key = `weekly_fid_summary:${userId}`;
+      const keys = await redis.keys(`${key}*`);
+      for (const k of keys) {
+        await redis.del(k);
+      }
+    }
+  } catch (err) {
+    console.error('Clear cache error:', err.message);
+  }
+};

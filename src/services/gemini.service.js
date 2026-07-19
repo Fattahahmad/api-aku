@@ -93,10 +93,17 @@ export const generateWeeklyFIDSummary = async (fidPrompt, userId) => {
 
     const summaryMatch = fullText.match(/SUMMARY:\s*([\s\S]*?)(?:\nSARAN:|$)/i);
     const suggestionMatch = fullText.match(/SARAN:\s*([\s\S]*?)$/i);
+    
+    const hasSummaryFormat = summaryMatch && summaryMatch[1];
+    const hasSuggestionFormat = suggestionMatch && suggestionMatch[1];
 
     const parsed = {
-      text: summaryMatch ? summaryMatch[1].trim() : fullText,
-      suggestion: suggestionMatch ? suggestionMatch[1].trim() : ''
+      text: hasSummaryFormat 
+        ? summaryMatch[1].trim() 
+        : (fidPrompt === "Belum ada data mood dalam seminggu ini." 
+            ? fidPrompt 
+            : "Minggu ini Anda memiliki pola emosi yang tercatat. Pertahankan konsistensi mencatat mood harian."),
+      suggestion: hasSuggestionFormat ? suggestionMatch[1].trim() : ""
     };
 
     await setGeminiCache(cacheKey, parsed);
@@ -106,6 +113,40 @@ export const generateWeeklyFIDSummary = async (fidPrompt, userId) => {
     return {
       text: "Minggu ini pantau emosi dengan lebih konsisten.",
       suggestion: "Catat setiap perubahan emosi ya."
+    };
+  }
+};
+
+export const generateWeeklyFIDSummaryForScheduler = async (fidPrompt, userId) => {
+  const model = getModelWithFallback();
+  try {
+    const result = await model.generateContent(fidPrompt);
+    const response = await result.response;
+    const fullText = response.text().trim();
+
+    const summaryMatch = fullText.match(/SUMMARY:\s*([\s\S]*?)(?:\nSARAN:|$)/i);
+    const suggestionMatch = fullText.match(/SARAN:\s*([\s\S]*?)$/i);
+
+    const cacheKey = getCacheKey('weekly_fid_summary', userId);
+    const hasSummaryFormat = summaryMatch && summaryMatch[1];
+    const hasSuggestionFormat = suggestionMatch && suggestionMatch[1];
+    
+    const parsed = {
+      text: hasSummaryFormat 
+        ? summaryMatch[1].trim() 
+        : (fidPrompt === "Belum ada data mood dalam seminggu ini." 
+            ? fidPrompt 
+            : "Minggu ini Anda memiliki pola emosi yang tercatat."),
+      suggestion: hasSuggestionFormat ? suggestionMatch[1].trim() : ""
+    };
+
+    await setGeminiCache(cacheKey, parsed);
+    return parsed;
+  } catch (error) {
+    console.error('Gemini FID weekly summary scheduler error:', error.message);
+    return {
+      text: "Minggu ini pantau emosi dengan lebih konsisten.",
+      suggestion: ""
     };
   }
 };

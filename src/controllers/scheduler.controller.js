@@ -8,8 +8,9 @@ const getWeekBoundaries = () => {
   const wibNow = new Date(now.getTime() + (7 * 60 * 60 * 1000));
   const dayOfWeek = wibNow.getDay();
 
+  // Sunday = 0 in JS, week ends on Sunday
   const sundayWIB = new Date(wibNow);
-  sundayWIB.setDate(sundayWIB.getDate() - dayOfWeek);
+  sundayWIB.setDate(sundayWIB.getDate() + (7 - dayOfWeek));
   sundayWIB.setHours(0, 0, 0, 0);
 
   const mondayWIB = new Date(sundayWIB);
@@ -46,11 +47,6 @@ export const processWeeklySummary = async (req, res, next) => {
       try {
         const trendData = await logModel.getWeeklyFIDData(user.id, from, to);
 
-        const formattedTrend = trendData.map(item => ({
-          emotion: fidService.getEmotionIndonesia(item.emotion),
-          intensity: Number(item.intensity)
-        }));
-
         const fidAggregates = fidService.aggregateWeeklyFID(trendData);
 
         if (fidAggregates.length === 0) {
@@ -59,7 +55,7 @@ export const processWeeklySummary = async (req, res, next) => {
         }
 
         const fidPrompt = fidService.buildFIDPrompt(fidAggregates);
-        const aiSummary = await geminiService.generateWeeklyFIDSummary(fidPrompt, user.id);
+        const aiSummary = await geminiService.generateWeeklyFIDSummaryForScheduler(fidPrompt, user.id);
 
         const dominantEmotion = getDominantEmotion(fidAggregates);
         const averageIntensity = getAverageIntensity(trendData);

@@ -1,43 +1,32 @@
-// src/models/insight.model.js
 import pool from '../config/database.js';
 
-export const getWeeklyMoodTrend = async (userId) => {
+export const getWeeklyInsightFromDB = async (userId, weekNumber) => {
   const query = `
-    SELECT 
-      TO_CHAR(created_at + INTERVAL '7 hours', 'Dy') AS day_name,
-      (created_at + INTERVAL '7 hours')::date AS log_date,
-      ROUND(AVG(mood_score), 1) AS avg_score
-    FROM daily_logs
-    WHERE user_id = $1 
-      AND created_at + INTERVAL '7 hours' >= (CURRENT_DATE - INTERVAL '7 days')
-    GROUP BY (created_at + INTERVAL '7 hours')::date, TO_CHAR(created_at + INTERVAL '7 hours', 'Dy')
-    ORDER BY log_date ASC;
+    SELECT * FROM weekly_insights WHERE user_id = $1 AND week_number = $2;
   `;
-  const result = await pool.query(query, [userId]);
-  return result.rows;
+  const result = await pool.query(query, [userId, weekNumber]);
+  return result.rows[0] || null;
 };
 
-const getMoodLabel = (score) => {
-  const labels = ['sangat sedih', 'sedih', 'down', 'netral', 'senang', 'sangat senang'];
-  return labels[score] || 'tidak diketahui';
-};
-
-export const getWeeklyEmotionDistribution = async (userId) => {
+export const saveWeeklyInsight = async (userId, weekNumber, data) => {
   const query = `
-    SELECT 
-      mood_score, 
-      COUNT(*) as count
-    FROM daily_logs
-    WHERE user_id = $1 
-      AND created_at + INTERVAL '7 hours' >= (CURRENT_DATE - INTERVAL '7 days')
-    GROUP BY mood_score
-    ORDER BY mood_score ASC;
+    INSERT INTO weekly_insights (user_id, start_date, end_date, summary_text, dominant_emotion, average_intensity, week_number)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    ON CONFLICT (user_id, week_number) DO UPDATE SET
+      summary_text = EXCLUDED.summary_text,
+      dominant_emotion = EXCLUDED.dominant_emotion,
+      average_intensity = EXCLUDED.average_intensity,
+      updated_at = NOW()
+    RETURNING *;
   `;
-  const result = await pool.query(query, [userId]);
-  
-  return result.rows.map(row => ({
-    emotion_label: getMoodLabel(row.mood_score),
-    value: row.mood_score,
-    count: row.count
-  }));
+  const result = await pool.query(query, [
+    userId, 
+    data.from, 
+    data.to, 
+    data.summaryText, 
+    data.dominantEmotion, 
+    data.averageIntensity, 
+    weekNumber
+  ]);
+  return result.rows[0];
 };

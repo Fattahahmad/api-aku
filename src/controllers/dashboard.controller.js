@@ -18,12 +18,14 @@ export const getSummary = async (req, res, next) => {
       intensity: Number(l.intensity) || 0
     }));
 
-    const aiInsight = await geminiService.generateDashboardInsight(
-      stats.totalCheckins,
-      stats.averageIntensity,
-      recentEmotions,
-      userId
-    );
+    const aiInsight = stats.totalCheckins === 0 
+      ? 'Mulailah hari ini dengan mencatat mood Anda. Konsistensi kecil bisa berubah menjadi kebiasaan besar!'
+      : await geminiService.generateDashboardInsight(
+          stats.totalCheckins,
+          stats.averageIntensity,
+          recentEmotions,
+          userId
+        );
 
     res.status(200).json({
       status: 'success',
