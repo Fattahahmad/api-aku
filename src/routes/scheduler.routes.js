@@ -24,8 +24,13 @@ router.post('/weekly-summary', async (req, res, next) => {
       const originalUrl = `${protocol}://${host}${req.originalUrl}`;
       
       try {
+        // Karena string kosong "" bernilai falsy di JS, jika req.rawBody === "",
+        // penggunaan || (OR) akan lompat ke JSON.stringify(req.body) yang menghasilkan "{}".
+        // Kita harus menggunakan ?? (nullish coalescing) agar string kosong tetap diterima.
+        const payloadBody = req.rawBody ?? (Object.keys(req.body || {}).length > 0 ? JSON.stringify(req.body) : '');
+        
         await receiver.verify({ 
-          body: req.rawBody || JSON.stringify(req.body) || '', 
+          body: payloadBody, 
           signature, 
           url: originalUrl 
         });
