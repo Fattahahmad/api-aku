@@ -9,10 +9,16 @@ const BATCH_SIZE = 10;
 const getWeekBoundaries = () => {
   const now = new Date();
   const wibNow = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+  
+  // getDay() mengembalikan 0 (Minggu), 1 (Senin), ..., 6 (Sabtu)
   const dayOfWeek = wibNow.getDay();
+  
+  // Jika hari ini Minggu (0), kita tidak perlu menambah hari untuk mencari hari Minggu.
+  // Jika bukan Minggu, kita cari jarak ke hari Minggu selanjutnya (7 - dayOfWeek).
+  const daysToSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
 
   const sundayWIB = new Date(wibNow);
-  sundayWIB.setDate(sundayWIB.getDate() + (7 - dayOfWeek));
+  sundayWIB.setDate(sundayWIB.getDate() + daysToSunday);
   sundayWIB.setHours(0, 0, 0, 0);
 
   const mondayWIB = new Date(sundayWIB);
