@@ -6,12 +6,14 @@ export const register = async (req, res, next) => {
     const { name, email, password } = req.body;
     
     const user = await authService.registerUser(name, email, password);
+    const token = await authService.loginUser(email, password);
 
     res.status(201).json({
       status: 'success',
       message: 'Registrasi berhasil',
       data: {
         user,
+        token,
       },
     });
   } catch (error) {
