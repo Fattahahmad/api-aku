@@ -7,14 +7,14 @@ const getWIBDate = () => {
   return wibTime.toISOString().split('T')[0];
 };
 
-export const createDailyLog = async (userId, emotion, intensity, journalText) => {
+export const createDailyLog = async (userId, emotion, intensity, journalText, client = pool) => {
   const query = `
     INSERT INTO daily_logs (user_id, emotion, intensity, journal_text) 
     VALUES ($1, $2, $3, $4) 
     RETURNING *;
   `;
   try {
-    const result = await pool.query(query, [userId, emotion, intensity, journalText]);
+    const result = await client.query(query, [userId, emotion, intensity, journalText]);
     return result.rows[0];
   } catch (error) {
     if (error.code === '23505') {

@@ -2,24 +2,7 @@ import * as logModel from '../models/log.model.js';
 import * as fidService from '../services/fid.service.js';
 import * as insightModel from '../models/insight.model.js';
 
-const getWeekBoundaries = () => {
-  const now = new Date();
-  const wibNow = new Date(now.getTime() + (7 * 60 * 60 * 1000));
-  const dayOfWeek = wibNow.getDay();
-
-  const sundayWIB = new Date(wibNow);
-  sundayWIB.setDate(sundayWIB.getDate() + (7 - dayOfWeek));
-  sundayWIB.setHours(0, 0, 0, 0);
-
-  const mondayWIB = new Date(sundayWIB);
-  mondayWIB.setDate(mondayWIB.getDate() - 6);
-
-  return {
-    from: mondayWIB.toISOString().split('T')[0],
-    to: sundayWIB.toISOString().split('T')[0],
-    weekNumber: `${sundayWIB.getFullYear()}-W${Math.ceil((sundayWIB.getDate() + (sundayWIB.getMonth() + 1) * 7) / 7)}`
-  };
-};
+import { getWeekBoundaries } from '../utils/date.util.js';
 
 const TEMPLATE_SUMMARY = {
   text: 'Summary minggu ini belum tersedia. Silakan tunggu hingga hari Minggu pukul 01:00 WIB.',

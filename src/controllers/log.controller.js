@@ -5,15 +5,23 @@ import * as geminiService from '../services/gemini.service.js';
 import InvariantError from '../exceptions/InvariantError.js';
 import NotFoundError from '../exceptions/NotFoundError.js';
 
+import pool from '../config/database.js';
+
 export const createLog = async (req, res, next) => {
+  let client;
   try {
     const userId = req.user.id;
     const { emotion, intensity, journal_text } = req.body;
 
-    const newLog = await logModel.createDailyLog(userId, emotion, intensity, journal_text);
-    const streakResult = await userModel.updateUserStreak(userId);
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    const newLog = await logModel.createDailyLog(userId, emotion, intensity, journal_text, client);
+    const streakResult = await userModel.updateUserStreak(userId, client);
 
     const suggestion = await geminiService.generateDailySuggestion(emotion, intensity, journal_text, userId);
+
+    await client.query('COMMIT');
 
     res.status(201).json({
       status: 'success',
@@ -25,10 +33,14 @@ export const createLog = async (req, res, next) => {
       },
     });
   } catch (error) {
+    if (client) await client.query('ROLLBACK');
+    
     if (error.code === '23505') {
       return next(new InvariantError('Anda sudah melakukan check-in hari ini. Silakan edit log yang tersedia jika ingin mengubah data.'));
     }
     next(error);
+  } finally {
+    if (client) client.release();
   }
 };
 

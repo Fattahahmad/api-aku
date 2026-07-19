@@ -42,22 +42,22 @@ export const updateUserProfile = async (userId, name, avatarUrl) => {
   return result.rows[0];
 };
 
-export const updateUserStreak = async (userId) => {
+export const updateUserStreak = async (userId, client = pool) => {
   const query = `
     UPDATE users 
     SET 
       current_streak = CASE 
         WHEN last_checkin_date IS NULL THEN 1
-        WHEN last_checkin_date = CURRENT_DATE - INTERVAL '1 day' THEN current_streak + 1
-        WHEN last_checkin_date = CURRENT_DATE THEN current_streak
+        WHEN last_checkin_date = (NOW() + INTERVAL '7 hours')::date - INTERVAL '1 day' THEN current_streak + 1
+        WHEN last_checkin_date = (NOW() + INTERVAL '7 hours')::date THEN current_streak
         ELSE 1
       END,
-      last_checkin_date = CURRENT_DATE,
+      last_checkin_date = (NOW() + INTERVAL '7 hours')::date,
       updated_at = NOW()
     WHERE id = $1
     RETURNING current_streak, last_checkin_date;
   `;
-  const result = await pool.query(query, [userId]);
+  const result = await client.query(query, [userId]);
   return result.rows[0];
 };
 

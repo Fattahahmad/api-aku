@@ -2,16 +2,7 @@ import * as habitModel from '../models/habit.model.js';
 import NotFoundError from '../exceptions/NotFoundError.js';
 import InvariantError from '../exceptions/InvariantError.js';
 
-const getWIBDate = (date = new Date()) => {
-  const wibTime = new Date(date.getTime() + (7 * 60 * 60 * 1000));
-  return wibTime.toISOString().split('T')[0];
-};
-
-const addDays = (dateString, days) => {
-  const date = new Date(`${dateString}T00:00:00+07:00`);
-  date.setDate(date.getDate() + days);
-  return date.toISOString().split('T')[0];
-};
+import { getWIBDate, addDays } from '../utils/date.util.js';
 
 const calculateStreak = (completedDates) => {
   const today = getWIBDate();
