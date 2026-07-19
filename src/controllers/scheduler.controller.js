@@ -2,13 +2,15 @@ import pool from '../config/database.js';
 import * as logModel from '../models/log.model.js';
 import * as fidService from '../services/fid.service.js';
 import * as geminiService from '../services/gemini.service.js';
+import * as insightModel from '../models/insight.model.js';
+
+const BATCH_SIZE = 10;
 
 const getWeekBoundaries = () => {
   const now = new Date();
   const wibNow = new Date(now.getTime() + (7 * 60 * 60 * 1000));
   const dayOfWeek = wibNow.getDay();
 
-  // Sunday = 0 in JS, week ends on Sunday
   const sundayWIB = new Date(wibNow);
   sundayWIB.setDate(sundayWIB.getDate() + (7 - dayOfWeek));
   sundayWIB.setHours(0, 0, 0, 0);
@@ -38,7 +40,7 @@ export const processWeeklySummary = async (req, res, next) => {
   try {
     console.log('Processing weekly summary for all users...');
 
-    const { rows: users } = await pool.query('SELECT id FROM users');
+    const { rows: users } = await pool.query(`SELECT id FROM users LIMIT ${BATCH_SIZE}`);
     const { from, to, weekNumber } = getWeekBoundaries();
 
     const results = [];
@@ -46,7 +48,6 @@ export const processWeeklySummary = async (req, res, next) => {
     for (const user of users) {
       try {
         const trendData = await logModel.getWeeklyFIDData(user.id, from, to);
-
         const fidAggregates = fidService.aggregateWeeklyFID(trendData);
 
         if (fidAggregates.length === 0) {
@@ -60,21 +61,14 @@ export const processWeeklySummary = async (req, res, next) => {
         const dominantEmotion = getDominantEmotion(fidAggregates);
         const averageIntensity = getAverageIntensity(trendData);
 
-        await pool.query(
-          `INSERT INTO weekly_insights (user_id, start_date, end_date, summary_text, dominant_emotion, average_intensity, week_number)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           ON CONFLICT (user_id, week_number) DO UPDATE SET
-             summary_text = EXCLUDED.summary_text,
-             dominant_emotion = EXCLUDED.dominant_emotion,
-             average_intensity = EXCLUDED.average_intensity,
-             updated_at = NOW()`,
-          [user.id, from, to, aiSummary.text, dominantEmotion, averageIntensity, weekNumber]
-        );
+        await insightModel.saveWeeklyInsight(user.id, weekNumber, {
+          from, to, summaryText: aiSummary.text, dominantEmotion, averageIntensity
+        });
 
         results.push({
           userId: user.id,
           status: 'processed',
-          data: { weekNumber, summary: aiSummary }
+          data: { weekNumber }
         });
       } catch (err) {
         console.error(`Error processing user ${user.id}:`, err.message);
@@ -88,6 +82,7 @@ export const processWeeklySummary = async (req, res, next) => {
       details: results
     });
   } catch (error) {
-    next(error);
+    console.error('Scheduler error:', error.message);
+    res.status(500).json({ status: 'error', message: error.message });
   }
 };
