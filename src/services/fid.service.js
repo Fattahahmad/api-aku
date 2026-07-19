@@ -97,7 +97,7 @@ export const buildFIDPrompt = (aggregates) => {
     const pLabel = PERSISTENCE_LABELS[item.persistence] || `${item.persistence} hari berturut-turut`;
     prompt += `- emosi ${item.emotionId}: muncul ${item.frequency}x, intensitas rata-rata ${item.avgIntensity}/10, persistensi ${pLabel}\n`;
   });
-  prompt += `\nEmosi dominan adalah "${topEmotionId}" dengan intensitas ${topEmotion.avgIntensity}/10 dan persistensi ${persistenceLabel}.\n\nBerikan dalam format berikut (gunakan bahasa Indonesia):\nSUMMARY: [tuliskan ringkasan narasi lengkap tentang pola emosi user, maksimal 60 kata]\nSARAN: [tuliskan saran kegiatan yang bisa dilakukan user untuk menyeimbangkan emosi ini, maksimal 40 kata]`;
+  prompt += `\nEmosi dominan adalah "${topEmotionId}" dengan intensitas ${topEmotion.avgIntensity}/10 dan persistensi ${persistenceLabel}.\n\nBerikan balasan HANYA dalam format JSON valid (tanpa blok markdown/backticks), dengan struktur murni seperti ini:\n{"summary": "ringkasan narasi tentang pola emosi user, maks 60 kata", "suggestion": "saran kegiatan nyata untuk user, maks 40 kata"}`;
 
   return prompt;
 };

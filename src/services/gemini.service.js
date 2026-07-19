@@ -122,23 +122,34 @@ export const generateWeeklyFIDSummaryForScheduler = async (fidPrompt, userId) =>
   try {
     const result = await model.generateContent(fidPrompt);
     const response = await result.response;
-    const fullText = response.text().trim();
-
-    const summaryMatch = fullText.match(/SUMMARY:\s*([\s\S]*?)(?:\nSARAN:|$)/i);
-    const suggestionMatch = fullText.match(/SARAN:\s*([\s\S]*?)$/i);
+    let fullText = response.text().trim();
+    
+    // Membersihkan teks dari sisa-sisa markdown backticks jika AI nakal
+    fullText = fullText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
 
     const cacheKey = getCacheKey('weekly_fid_summary', userId);
-    const hasSummaryFormat = summaryMatch && summaryMatch[1];
-    const hasSuggestionFormat = suggestionMatch && suggestionMatch[1];
-    
-    const parsed = {
-      text: hasSummaryFormat 
-        ? summaryMatch[1].trim() 
-        : (fidPrompt === "Belum ada data mood dalam seminggu ini." 
-            ? fidPrompt 
-            : "Minggu ini Anda memiliki pola emosi yang tercatat."),
-      suggestion: hasSuggestionFormat ? suggestionMatch[1].trim() : ""
-    };
+    let parsed;
+
+    if (fidPrompt.includes("Belum ada data")) {
+      parsed = {
+        text: "Belum ada data mood dalam seminggu ini.",
+        suggestion: "Mulai catat mood harianmu untuk mendapatkan insight di akhir minggu ya!"
+      };
+    } else {
+      try {
+        const jsonResponse = JSON.parse(fullText);
+        parsed = {
+          text: jsonResponse.summary || "Minggu ini Anda memiliki pola emosi yang tercatat.",
+          suggestion: jsonResponse.suggestion || "Luangkan waktu sejenak untuk bersantai dan refleksi diri."
+        };
+      } catch (parseError) {
+        console.error('Failed to parse Gemini JSON:', parseError.message, 'Raw Output:', fullText);
+        parsed = {
+          text: fullText, // Jika gagal di-parse, kita ambil semua teks utuh sebagai summary
+          suggestion: "Jaga selalu keseimbangan emosi Anda minggu ini."
+        };
+      }
+    }
 
     await setGeminiCache(cacheKey, parsed);
     return parsed;
