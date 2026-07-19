@@ -32,9 +32,7 @@ export const getWeeklyInsights = async (req, res, next) => {
       day: new Date(item.log_date).toLocaleDateString('id-ID', { weekday: 'short' }),
       date: item.log_date,
       emotion: fidService.getEmotionIndonesia(item.emotion),
-      intensity: Number(item.intensity) || 0,
-      duration: Number(item.duration) || 0,
-      fid_score: Number(item.fid_score) || 0
+      intensity: Number(item.intensity) || 0
     }));
 
     const fidAggregates = fidService.aggregateWeeklyFID(trendData);

@@ -19,18 +19,6 @@ export const connectRedis = async () => {
   return redisClient;
 };
 
-export const queueHFPrediction = async (userId, logId, journalText) => {
-  if (!redisClient) return;
-  const payload = JSON.stringify({ userId, logId, journalText });
-  await redisClient.lPush('hf_prediction_queue', payload);
-};
-
-export const getQueuedPrediction = async () => {
-  if (!redisClient) return null;
-  const payload = await redisClient.rPop('hf_prediction_queue');
-  return payload ? JSON.parse(payload) : null;
-};
-
 export const cacheEmotionResult = async (journalText, emotion, confidence) => {
   if (!redisClient) return;
   const key = `emotion:${Buffer.from(journalText).toString('base64').slice(0, 32)}`;

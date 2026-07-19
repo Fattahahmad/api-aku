@@ -1,4 +1,5 @@
 import pool from '../config/database.js';
+import InvariantError from '../exceptions/InvariantError.js';
 
 const getWIBDate = () => {
   const now = new Date();
@@ -6,25 +7,31 @@ const getWIBDate = () => {
   return wibTime.toISOString().split('T')[0];
 };
 
-export const createDailyLog = async (userId, emotion, intensity, duration, journalText) => {
-  const fidScore = intensity && duration ? intensity * duration : null;
+export const createDailyLog = async (userId, emotion, intensity, journalText) => {
   const query = `
-    INSERT INTO daily_logs (user_id, emotion, intensity, duration, journal_text, fid_score) 
-    VALUES ($1, $2, $3, $4, $5, $6) 
+    INSERT INTO daily_logs (user_id, emotion, intensity, journal_text) 
+    VALUES ($1, $2, $3, $4) 
     RETURNING *;
   `;
-  const result = await pool.query(query, [userId, emotion, intensity, duration, journalText, fidScore]);
-  return result.rows[0];
+  try {
+    const result = await pool.query(query, [userId, emotion, intensity, journalText]);
+    return result.rows[0];
+  } catch (error) {
+    if (error.code === '23505') {
+      throw new InvariantError('Anda sudah melakukan check-in hari ini. Silakan edit log yang tersedia jika ingin mengubah data.');
+    }
+    throw error;
+  }
 };
 
-export const updateLogEmotion = async (logId, emotionLabel) => {
+export const updateLogEmotion = async (logId, emotion) => {
   const query = `
     UPDATE daily_logs 
-    SET emotion_label = $1, updated_at = NOW() 
+    SET emotion = $1, updated_at = NOW() 
     WHERE id = $2 
     RETURNING *;
   `;
-  const result = await pool.query(query, [emotionLabel, logId]);
+  const result = await pool.query(query, [emotion, logId]);
   return result.rows[0];
 };
 
@@ -34,8 +41,6 @@ export const getWeeklyFIDData = async (userId, weekStart, weekEnd) => {
       DATE(created_at + INTERVAL '7 hours') as log_date,
       emotion,
       intensity,
-      duration,
-      fid_score,
       created_at
     FROM daily_logs
     WHERE user_id = $1 
@@ -48,37 +53,17 @@ export const getWeeklyFIDData = async (userId, weekStart, weekEnd) => {
 };
 
 export const checkLogToday = async (userId) => {
-  const now = new Date();
-  const utcHours = now.getUTCHours();
-  const wibHours = utcHours + 7;
-
-  const utcMidnightWIB = new Date(now);
-  utcMidnightWIB.setUTCHours(17, 0, 0, 0);
-
-  if (wibHours >= 24) {
-    utcMidnightWIB.setUTCDate(utcMidnightWIB.getUTCDate() + 1);
-  } else if (utcHours < 17) {
-    utcMidnightWIB.setUTCDate(utcMidnightWIB.getUTCDate() - 1);
-  }
-
-  const utcNextDayWIB = new Date(utcMidnightWIB);
-  utcNextDayWIB.setUTCDate(utcNextDayWIB.getUTCDate() + 1);
-
+  const todayWIB = getWIBDate();
+  
   const query = `
-    SELECT id, user_id, emotion, intensity, duration, journal_text, created_at, fid_score
+    SELECT id, user_id, emotion, intensity, journal_text, created_at
     FROM daily_logs 
     WHERE user_id = $1 
-      AND created_at >= $2 
-      AND created_at < $3;
+      AND DATE(created_at + INTERVAL '7 hours') = $2
+    LIMIT 1;
   `;
-  const result = await pool.query(query, [userId, utcMidnightWIB, utcNextDayWIB]);
-
-  const todayWIB = getWIBDate();
-  return result.rows.find(log => {
-    const logDateUTC = new Date(log.created_at);
-    const logWIB = new Date(logDateUTC.getTime() + (7 * 60 * 60 * 1000));
-    return logWIB.toISOString().split('T')[0] === todayWIB;
-  });
+  const result = await pool.query(query, [userId, todayWIB]);
+  return result.rows[0] || null;
 };
 
 export const getMonthlyLogs = async (userId, month, year) => {
@@ -87,11 +72,10 @@ export const getMonthlyLogs = async (userId, month, year) => {
       (created_at + INTERVAL '7 hours')::date as log_date, 
       emotion,
       intensity,
-      duration,
-      fid_score
+      journal_text
     FROM daily_logs 
     WHERE user_id = $1 
-      AND EXTRACT(MONTH FROM (created_at + INTERVAL '7 hours')) = $2 
+      AND EXTRACT(MONTH FROM (created_at + INTERVAL '7 hours')) = $2
       AND EXTRACT(YEAR FROM (created_at + INTERVAL '7 hours')) = $3
     ORDER BY created_at ASC;
   `;
@@ -101,7 +85,7 @@ export const getMonthlyLogs = async (userId, month, year) => {
 
 export const getRecentFIDTrend = async (userId, limit = 5) => {
   const query = `
-    SELECT emotion, intensity, duration, fid_score, created_at
+    SELECT emotion, intensity, created_at
     FROM daily_logs
     WHERE user_id = $1
     ORDER BY created_at DESC
@@ -111,51 +95,42 @@ export const getRecentFIDTrend = async (userId, limit = 5) => {
   return result.rows;
 };
 
-const DURATION_LABELS = { 1: '<1 jam', 2: 'setengah hari', 3: 'seharian penuh' };
-
-export const getWeeklyFIDAggregation = async (userId, weekStart, weekEnd) => {
-  const query = `
-    SELECT 
-      emotion,
-      COUNT(*) as frequency,
-      ROUND(AVG(intensity), 2) as avg_intensity,
-      ROUND(AVG(duration), 2) as avg_duration
-    FROM daily_logs
-    WHERE user_id = $1 
-      AND DATE(created_at + INTERVAL '7 hours') >= $2
-      AND DATE(created_at + INTERVAL '7 hours') <= $3
-    GROUP BY emotion
-    ORDER BY frequency DESC;
-  `;
-  const result = await pool.query(query, [userId, weekStart, weekEnd]);
-  return result.rows;
-};
-
 export const getLogByDate = async (userId, dateString) => {
   const query = `
-    SELECT * FROM daily_logs 
-    WHERE user_id = $1 AND DATE(created_at) = $2;
+    SELECT id, user_id, emotion, intensity, journal_text, created_at, updated_at
+    FROM daily_logs 
+    WHERE user_id = $1 AND DATE(created_at + INTERVAL '7 hours') = $2;
   `;
   const result = await pool.query(query, [userId, dateString]);
   return result.rows[0];
 };
 
 export const getLogById = async (logId) => {
-  const query = `SELECT * FROM daily_logs WHERE id = $1;`;
+  const query = `SELECT id, user_id, emotion, intensity, journal_text, created_at, updated_at FROM daily_logs WHERE id = $1;`;
   const result = await pool.query(query, [logId]);
   return result.rows[0];
 };
 
-export const updateDailyLog = async (logId, emotion, intensity, duration, journalText) => {
-  const fidScore = intensity * duration;
+export const updateDailyLog = async (logId, emotion, intensity, journalText) => {
   const query = `
     UPDATE daily_logs 
-    SET emotion = $1, intensity = $2, duration = $3, journal_text = $4, fid_score = $5, updated_at = NOW() 
-    WHERE id = $6 
+    SET emotion = $1, intensity = $2, journal_text = $3, updated_at = NOW() 
+    WHERE id = $4 
     RETURNING *;
   `;
-  const result = await pool.query(query, [emotion, intensity, duration, journalText, fidScore, logId]);
+  const result = await pool.query(query, [emotion, intensity, journalText, logId]);
   return result.rows[0];
+};
+
+export const updateDailyLogWithOwnership = async (logId, userId, emotion, intensity, journalText) => {
+  const query = `
+    UPDATE daily_logs 
+    SET emotion = $1, intensity = $2, journal_text = $3, updated_at = NOW() 
+    WHERE id = $4 AND user_id = $5
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [emotion, intensity, journalText, logId, userId]);
+  return result.rows[0] || null;
 };
 
 export const deleteDailyLog = async (logId) => {
@@ -163,9 +138,20 @@ export const deleteDailyLog = async (logId) => {
   await pool.query(query, [logId]);
 };
 
+export const deleteDailyLogWithOwnership = async (logId, userId) => {
+  const query = `
+    DELETE FROM daily_logs 
+    WHERE id = $1 AND user_id = $2
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [logId, userId]);
+  return result.rows[0] || null;
+};
+
 export const getJournalHistory = async (userId, month, year, limit, offset) => {
   const query = `
-    SELECT * FROM daily_logs
+    SELECT id, user_id, emotion, intensity, journal_text, created_at, updated_at
+    FROM daily_logs
     WHERE user_id = $1
       AND ($2::int IS NULL OR EXTRACT(MONTH FROM created_at) = $2)
       AND ($3::int IS NULL OR EXTRACT(YEAR FROM created_at) = $3)
@@ -200,7 +186,7 @@ export const countJournalHistory = async (userId, month, year) => {
 
 export const getRecentEmotionTrend = async (userId, limit = 5) => {
   const query = `
-    SELECT mood_score, emotion_label, created_at
+    SELECT emotion, intensity, created_at
     FROM daily_logs
     WHERE user_id = $1
     ORDER BY created_at DESC

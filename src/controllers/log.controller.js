@@ -4,22 +4,16 @@ import * as userModel from '../models/user.model.js';
 import * as geminiService from '../services/gemini.service.js';
 import InvariantError from '../exceptions/InvariantError.js';
 import NotFoundError from '../exceptions/NotFoundError.js';
-import * as fidService from '../services/fid.service.js';
 
 export const createLog = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { emotion, intensity, duration, journal_text } = req.body;
-    const existingLog = await logModel.checkLogToday(userId);
-    if (existingLog) {
-      throw new InvariantError('Anda sudah melakukan check-in hari ini. Silakan edit log yang tersedia jika ingin mengubah data.');
-    }
+    const { emotion, intensity, journal_text } = req.body;
 
-    const newLog = await logModel.createDailyLog(userId, emotion, intensity, duration, journal_text);
+    const newLog = await logModel.createDailyLog(userId, emotion, intensity, journal_text);
     const streakResult = await userModel.updateUserStreak(userId);
 
     const suggestion = await geminiService.generateDailySuggestion(emotion, intensity, journal_text, userId);
-    const fidScore = fidService.calculateFIDScore(intensity, duration);
 
     res.status(201).json({
       status: 'success',
@@ -27,11 +21,13 @@ export const createLog = async (req, res, next) => {
       data: { 
         log: newLog,
         suggestion,
-        streak: streakResult.current_streak,
-        fid_score: fidScore
+        streak: streakResult.current_streak
       },
     });
   } catch (error) {
+    if (error.code === '23505') {
+      return next(new InvariantError('Anda sudah melakukan check-in hari ini. Silakan edit log yang tersedia jika ingin mengubah data.'));
+    }
     next(error);
   }
 };
@@ -100,13 +96,15 @@ export const updateLog = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    const { emotion, intensity, duration, journal_text } = req.body;
-    const log = await logModel.getLogById(id);
-    if (!log || log.user_id !== userId) {
-      throw new NotFoundError('Log jurnal tidak ditemukan.');
+    const { emotion, intensity, journal_text } = req.body;
+
+    const updatedLog = await logModel.updateDailyLogWithOwnership(id, userId, emotion, intensity, journal_text);
+    
+    if (!updatedLog) {
+      throw new NotFoundError('Log jurnal tidak ditemukan atau bukan milik Anda.');
     }
 
-    const logDateUTC = new Date(log.created_at);
+    const logDateUTC = new Date(updatedLog.created_at);
     const logDateWIB = new Date(logDateUTC.getTime() + (7 * 60 * 60 * 1000));
     const logDateStr = logDateWIB.toISOString().split('T')[0];
 
@@ -117,8 +115,6 @@ export const updateLog = async (req, res, next) => {
     if (logDateStr !== todayStr) {
       throw new InvariantError('Akses ditolak. Jurnal hari-hari sebelumnya tidak dapat diubah.');
     }
-
-    const updatedLog = await logModel.updateDailyLog(id, emotion, intensity, duration, journal_text);
 
     res.status(200).json({
       status: 'success',
@@ -135,12 +131,13 @@ export const deleteLog = async (req, res, next) => {
     const userId = req.user.id;
     const { id } = req.params;
 
-    const log = await logModel.getLogById(id);
-    if (!log || log.user_id !== userId) {
-      throw new NotFoundError('Log jurnal tidak ditemukan.');
+    const deletedLog = await logModel.deleteDailyLogWithOwnership(id, userId);
+    
+    if (!deletedLog) {
+      throw new NotFoundError('Log jurnal tidak ditemukan atau bukan milik Anda.');
     }
 
-    const logDateUTC = new Date(log.created_at);
+    const logDateUTC = new Date(deletedLog.created_at);
     const logDateWIB = new Date(logDateUTC.getTime() + (7 * 60 * 60 * 1000));
     const logDateStr = logDateWIB.toISOString().split('T')[0];
     
@@ -151,8 +148,6 @@ export const deleteLog = async (req, res, next) => {
     if (logDateStr !== todayStr) {
       throw new InvariantError('Akses ditolak. Jurnal hari-hari sebelumnya tidak dapat dihapus.');
     }
-
-    await logModel.deleteDailyLog(id);
 
     res.status(200).json({
       status: 'success',

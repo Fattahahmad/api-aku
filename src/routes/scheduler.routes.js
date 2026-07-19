@@ -1,6 +1,5 @@
 import express from 'express';
 import { processWeeklySummary } from '../controllers/scheduler.controller.js';
-import { processHFQueueHandler } from '../jobs/hf-worker.js';
 
 const router = express.Router();
 
@@ -56,29 +55,5 @@ router.post('/weekly-summary', rawBodyParser, async (req, res, next) => {
     next(err);
   }
 }, processWeeklySummary);
-
-// Endpoint untuk QStash scheduler - HF queue worker
-router.post('/process-hf', rawBodyParser, async (req, res, next) => {
-  try {
-    const { error, valid } = await verifyQStash(req, res);
-    if (error) {
-      return res.status(401).json({ status: 'fail', message: error });
-    }
-
-    if (req.body && req.body.length > 0) {
-      try {
-        req.body = JSON.parse(req.body.toString('utf-8'));
-      } catch (e) {
-        req.body = {};
-      }
-    } else {
-      req.body = {};
-    }
-
-    next();
-  } catch (err) {
-    next(err);
-  }
-}, processHFQueueHandler);
 
 export default router;

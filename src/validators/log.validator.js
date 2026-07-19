@@ -12,9 +12,5 @@ export const createLogSchema = Joi.object({
     'number.max': 'Intensitas maksimal adalah 10',
     'any.required': 'Intensitas wajib diisi'
   }),
-  duration: Joi.number().integer().valid(1, 2, 3).required().messages({
-    'any.only': 'Durasi harus 1 (<1 jam), 2 (setengah hari), atau 3 (seharian penuh)',
-    'any.required': 'Durasi wajib diisi'
-  }),
   journal_text: Joi.string().allow('').optional()
 });

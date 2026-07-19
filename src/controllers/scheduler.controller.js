@@ -22,6 +22,17 @@ const getWeekBoundaries = () => {
   };
 };
 
+const getDominantEmotion = (fidAggregates) => {
+  if (fidAggregates.length === 0) return null;
+  return fidService.getEmotionIndonesia(fidAggregates[0].emotion);
+};
+
+const getAverageIntensity = (trendData) => {
+  if (trendData.length === 0) return 0;
+  const sum = trendData.reduce((acc, item) => acc + Number(item.intensity || 0), 0);
+  return Number((sum / trendData.length).toFixed(1));
+};
+
 export const processWeeklySummary = async (req, res, next) => {
   try {
     console.log('Processing weekly summary for all users...');
@@ -37,8 +48,7 @@ export const processWeeklySummary = async (req, res, next) => {
 
         const formattedTrend = trendData.map(item => ({
           emotion: fidService.getEmotionIndonesia(item.emotion),
-          intensity: Number(item.intensity),
-          duration: Number(item.duration)
+          intensity: Number(item.intensity)
         }));
 
         const fidAggregates = fidService.aggregateWeeklyFID(trendData);
@@ -50,6 +60,20 @@ export const processWeeklySummary = async (req, res, next) => {
 
         const fidPrompt = fidService.buildFIDPrompt(fidAggregates);
         const aiSummary = await geminiService.generateWeeklyFIDSummary(fidPrompt, user.id);
+
+        const dominantEmotion = getDominantEmotion(fidAggregates);
+        const averageIntensity = getAverageIntensity(trendData);
+
+        await pool.query(
+          `INSERT INTO weekly_insights (user_id, start_date, end_date, summary_text, dominant_emotion, average_intensity, week_number)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (user_id, week_number) DO UPDATE SET
+             summary_text = EXCLUDED.summary_text,
+             dominant_emotion = EXCLUDED.dominant_emotion,
+             average_intensity = EXCLUDED.average_intensity,
+             updated_at = NOW()`,
+          [user.id, from, to, aiSummary.text, dominantEmotion, averageIntensity, weekNumber]
+        );
 
         results.push({
           userId: user.id,

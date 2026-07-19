@@ -13,20 +13,14 @@ export const getSummary = async (req, res, next) => {
       logModel.getRecentFIDTrend(userId, 5)
     ]);
 
-    const avgFidScore = recentLogs.length > 0
-      ? (recentLogs.reduce((sum, l) => sum + Number(l.fid_score || 0), 0) / recentLogs.length).toFixed(1)
-      : 0;
-
     const recentEmotions = recentLogs.map(l => ({
       emotion: fidService.getEmotionIndonesia(l.emotion),
-      intensity: Number(l.intensity) || 0,
-      duration: Number(l.duration) || 0,
-      fid_score: Number(l.fid_score) || 0
+      intensity: Number(l.intensity) || 0
     }));
 
     const aiInsight = await geminiService.generateDashboardInsight(
       stats.totalCheckins,
-      avgFidScore,
+      stats.averageIntensity,
       recentEmotions,
       userId
     );
@@ -36,7 +30,7 @@ export const getSummary = async (req, res, next) => {
       data: {
         user_name: user.name.split(' ')[0],
         total_checkins: stats.totalCheckins,
-        average_fid_score: avgFidScore,
+        average_intensity: stats.averageIntensity,
         current_streak: user.current_streak || 0,
         recent_emotions: recentEmotions,
         recent_insight: aiInsight

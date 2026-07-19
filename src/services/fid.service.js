@@ -1,4 +1,3 @@
-const DURATION_LABELS = { 1: '<1 jam', 2: 'setengah hari', 3: 'seharian penuh' };
 const EMOTION_INDONESIA = {
   Joy: 'senang',
   Sadness: 'sedih',
@@ -14,8 +13,34 @@ export const getEmotionIndonesia = (emotionEn) => {
   return EMOTION_INDONESIA[emotionEn] || emotionEn.toLowerCase();
 };
 
-export const calculateFIDScore = (intensity, duration) => {
-  return intensity * duration;
+export const calculatePersistence = (logs, targetEmotion) => {
+  const emotionLogs = logs
+    .filter(log => log.emotion === targetEmotion)
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+  if (emotionLogs.length === 0) return 0;
+
+  let maxStreak = 1;
+  let currentStreak = 1;
+
+  for (let i = 1; i < emotionLogs.length; i++) {
+    const prevDate = new Date(emotionLogs[i - 1].created_at);
+    const currDate = new Date(emotionLogs[i].created_at);
+    
+    const prevWIB = new Date(prevDate.getTime() + 7 * 60 * 60 * 1000);
+    const currWIB = new Date(currDate.getTime() + 7 * 60 * 60 * 1000);
+    
+    const dayDiff = Math.round((currWIB - prevWIB) / (24 * 60 * 60 * 1000));
+    
+    if (dayDiff === 1) {
+      currentStreak += 1;
+      maxStreak = Math.max(maxStreak, currentStreak);
+    } else {
+      currentStreak = 1;
+    }
+  }
+
+  return maxStreak;
 };
 
 export const aggregateWeeklyFID = (logs) => {
@@ -27,27 +52,35 @@ export const aggregateWeeklyFID = (logs) => {
       aggregation[emotion] = {
         emotion,
         count: 0,
-        totalIntensity: 0,
-        totalDuration: 0,
-        scores: []
+        totalIntensity: 0
       };
     }
     aggregation[emotion].count += 1;
     aggregation[emotion].totalIntensity += Number(log.intensity) || 0;
-    aggregation[emotion].totalDuration += Number(log.duration) || 0;
-    aggregation[emotion].scores.push(Number(log.fid_score) || 0);
   }
 
-  const result = Object.values(aggregation).map(item => ({
-    emotion: item.emotion,
-    emotionId: getEmotionIndonesia(item.emotion),
-    frequency: item.count,
-    avgIntensity: item.count > 0 ? (item.totalIntensity / item.count).toFixed(1) : 0,
-    avgDuration: item.count > 0 ? (item.totalDuration / item.count).toFixed(1) : 0,
-    avgFidScore: item.count > 0 ? (item.scores.reduce((a, b) => a + b, 0) / item.count).toFixed(1) : 0
-  }));
+  const result = Object.values(aggregation).map(item => {
+    const persistence = calculatePersistence(logs, item.emotion);
+    return {
+      emotion: item.emotion,
+      emotionId: getEmotionIndonesia(item.emotion),
+      frequency: item.count,
+      avgIntensity: item.count > 0 ? (item.totalIntensity / item.count).toFixed(1) : 0,
+      persistence
+    };
+  });
 
   return result.sort((a, b) => b.frequency - a.frequency);
+};
+
+const PERSISTENCE_LABELS = {
+  1: 'sekitar 1 hari',
+  2: '2 hari berturut-turut',
+  3: '3 hari berturut-turut',
+  4: '4 hari berturut-turut',
+  5: '5 hari berturut-turut',
+  6: '6 hari berturut-turut',
+  7: 'sepanjang minggu'
 };
 
 export const buildFIDPrompt = (aggregates) => {
@@ -57,13 +90,14 @@ export const buildFIDPrompt = (aggregates) => {
 
   const topEmotion = aggregates[0];
   const topEmotionId = topEmotion.emotionId;
-  const durationLabel = DURATION_LABELS[Math.round(topEmotion.avgDuration)] || 'tidak diketahui';
+  const persistenceLabel = PERSISTENCE_LABELS[topEmotion.persistence] || `${topEmotion.persistence} hari berturut-turut`;
 
   let prompt = `Berdasarkan data mood minggu ini (Sen-Minggu):\n`;
   aggregates.forEach(item => {
-    prompt += `- emosi ${item.emotionId}: muncul ${item.frequency}x, intensitas rata-rata ${item.avgIntensity}/10, durasi rata-rata ${item.avgDuration}\n`;
+    const pLabel = PERSISTENCE_LABELS[item.persistence] || `${item.persistence} hari berturut-turut`;
+    prompt += `- emosi ${item.emotionId}: muncul ${item.frequency}x, intensitas rata-rata ${item.avgIntensity}/10, persistensi ${pLabel}\n`;
   });
-  prompt += `\nEmosi dominan adalah "${topEmotionId}" dengan intensitas ${topEmotion.avgIntensity}/10 dan durasi ${durationLabel}.\n\nBerikan dalam format berikut (gunakan bahasa Indonesia):\nSUMMARY: [tuliskan ringkasan narasi lengkap tentang pola emosi user, maksimal 60 kata]\nSARAN: [tuliskan saran kegiatan yang bisa dilakukan user untuk menyeimbangkan emosi ini, maksimal 40 kata]`;
+  prompt += `\nEmosi dominan adalah "${topEmotionId}" dengan intensitas ${topEmotion.avgIntensity}/10 dan persistensi ${persistenceLabel}.\n\nBerikan dalam format berikut (gunakan bahasa Indonesia):\nSUMMARY: [tuliskan ringkasan narasi lengkap tentang pola emosi user, maksimal 60 kata]\nSARAN: [tuliskan saran kegiatan yang bisa dilakukan user untuk menyeimbangkan emosi ini, maksimal 40 kata]`;
 
   return prompt;
 };
