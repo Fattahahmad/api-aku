@@ -49,8 +49,9 @@ export const getWeeklyInsights = async (req, res, next) => {
         fid_aggregates: fidAggregates,
         summary: {
           text: weeklyInsight.summary_text,
-          suggestion: ''
-        }
+          suggestion: weeklyInsight.suggestion_text || ''
+        },
+        mood_state: weeklyInsight.mood_state || 'Cukup'
       }
     });
   } catch (error) {

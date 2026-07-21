@@ -133,6 +133,7 @@ export const generateWeeklyFIDSummaryForScheduler = async (fidPrompt, userId) =>
     if (fidPrompt.includes("Belum ada data")) {
       parsed = {
         text: "Belum ada data mood dalam seminggu ini.",
+        prediction: "",
         suggestion: "Mulai catat mood harianmu untuk mendapatkan insight di akhir minggu ya!"
       };
     } else {
@@ -140,12 +141,14 @@ export const generateWeeklyFIDSummaryForScheduler = async (fidPrompt, userId) =>
         const jsonResponse = JSON.parse(fullText);
         parsed = {
           text: jsonResponse.summary || "Minggu ini Anda memiliki pola emosi yang tercatat.",
+          prediction: jsonResponse.prediction || "Tren emosi Anda diperkirakan stabil ke depannya.",
           suggestion: jsonResponse.suggestion || "Luangkan waktu sejenak untuk bersantai dan refleksi diri."
         };
       } catch (parseError) {
         console.error('Failed to parse Gemini JSON:', parseError.message, 'Raw Output:', fullText);
         parsed = {
           text: fullText, // Jika gagal di-parse, kita ambil semua teks utuh sebagai summary
+          prediction: "Menunggu data lebih lanjut untuk memprediksi tren.",
           suggestion: "Jaga selalu keseimbangan emosi Anda minggu ini."
         };
       }
@@ -157,6 +160,7 @@ export const generateWeeklyFIDSummaryForScheduler = async (fidPrompt, userId) =>
     console.error('Gemini FID weekly summary scheduler error:', error.message);
     return {
       text: "Minggu ini pantau emosi dengan lebih konsisten.",
+      prediction: "",
       suggestion: ""
     };
   }

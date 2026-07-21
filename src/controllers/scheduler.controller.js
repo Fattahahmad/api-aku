@@ -38,14 +38,21 @@ export const processWeeklySummary = async (req, res, next) => {
           continue;
         }
 
-        const fidPrompt = fidService.buildFIDPrompt(fidAggregates);
+        const weeklyMetrics = fidService.calculateWeeklyMoodMetrics(trendData);
+        const fidPrompt = fidService.buildFIDPrompt(fidAggregates, weeklyMetrics);
         const aiSummary = await geminiService.generateWeeklyFIDSummaryForScheduler(fidPrompt, user.id);
 
         const dominantEmotion = getDominantEmotion(fidAggregates);
         const averageIntensity = getAverageIntensity(trendData);
 
         await insightModel.saveWeeklyInsight(user.id, weekNumber, {
-          from, to, summaryText: aiSummary.text, dominantEmotion, averageIntensity
+          from,
+          to,
+          summaryText: aiSummary.text,
+          dominantEmotion,
+          averageIntensity,
+          suggestionText: aiSummary.suggestion,
+          moodState: weeklyMetrics.moodState
         });
 
         results.push({

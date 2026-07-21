@@ -10,12 +10,14 @@ export const getWeeklyInsightFromDB = async (userId, weekNumber) => {
 
 export const saveWeeklyInsight = async (userId, weekNumber, data) => {
   const query = `
-    INSERT INTO weekly_insights (user_id, start_date, end_date, summary_text, dominant_emotion, average_intensity, week_number)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    INSERT INTO weekly_insights (user_id, start_date, end_date, summary_text, dominant_emotion, average_intensity, week_number, suggestion_text, mood_state)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     ON CONFLICT (user_id, week_number) DO UPDATE SET
       summary_text = EXCLUDED.summary_text,
       dominant_emotion = EXCLUDED.dominant_emotion,
       average_intensity = EXCLUDED.average_intensity,
+      suggestion_text = EXCLUDED.suggestion_text,
+      mood_state = EXCLUDED.mood_state,
       updated_at = NOW()
     RETURNING *;
   `;
@@ -26,7 +28,9 @@ export const saveWeeklyInsight = async (userId, weekNumber, data) => {
     data.summaryText, 
     data.dominantEmotion, 
     data.averageIntensity, 
-    weekNumber
+    weekNumber,
+    data.suggestionText,
+    data.moodState
   ]);
   return result.rows[0];
 };

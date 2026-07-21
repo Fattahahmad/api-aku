@@ -83,7 +83,70 @@ const PERSISTENCE_LABELS = {
   7: 'sepanjang minggu'
 };
 
-export const buildFIDPrompt = (aggregates) => {
+export const calculateDailyMoodScore = (emotion, intensity) => {
+  const mappedIntensity = Math.ceil(intensity / 2); // 1-10 mapped to 1-5
+  const emotionEn = Object.keys(EMOTION_INDONESIA).find(
+    key => key.toLowerCase() === emotion.toLowerCase()
+  ) || emotion;
+
+  // 1. Positive Emotions
+  if (emotionEn === 'Joy' || emotionEn === 'Trust') {
+    return mappedIntensity;
+  }
+
+  // 2. Negative Emotions
+  if (emotionEn === 'Sadness' || emotionEn === 'Fear' || emotionEn === 'Anger' || emotionEn === 'Disgust') {
+    return 6 - mappedIntensity;
+  }
+
+  // 3. Neutral/Transition Emotions
+  if (emotionEn === 'Surprise' || emotionEn === 'Anticipation') {
+    if (mappedIntensity <= 3) {
+      return 3;
+    } else {
+      return emotionEn === 'Anticipation' ? 4 : 3;
+    }
+  }
+
+  // Fallback
+  return 3;
+};
+
+export const calculateWeeklyMoodMetrics = (logs) => {
+  if (!logs || logs.length === 0) {
+    return {
+      averageScore: 0,
+      moodState: 'Belum Ada Data'
+    };
+  }
+
+  let totalScore = 0;
+  for (const log of logs) {
+    totalScore += calculateDailyMoodScore(log.emotion, Number(log.intensity) || 0);
+  }
+
+  const averageScore = Number((totalScore / logs.length).toFixed(2));
+
+  let moodState = 'Cukup';
+  if (averageScore >= 4.0) {
+    moodState = 'Sangat Baik';
+  } else if (averageScore >= 3.0) {
+    moodState = 'Baik';
+  } else if (averageScore >= 2.5) {
+    moodState = 'Cukup';
+  } else if (averageScore >= 1.5) {
+    moodState = 'Perlu Perhatian';
+  } else {
+    moodState = 'Sangat Perlu Perhatian';
+  }
+
+  return {
+    averageScore,
+    moodState
+  };
+};
+
+export const buildFIDPrompt = (aggregates, weeklyMetrics) => {
   if (aggregates.length === 0) {
     return "Belum ada data mood dalam seminggu ini.";
   }
@@ -97,7 +160,13 @@ export const buildFIDPrompt = (aggregates) => {
     const pLabel = PERSISTENCE_LABELS[item.persistence] || `${item.persistence} hari berturut-turut`;
     prompt += `- emosi ${item.emotionId}: muncul ${item.frequency}x, intensitas rata-rata ${item.avgIntensity}/10, persistensi ${pLabel}\n`;
   });
-  prompt += `\nEmosi dominan adalah "${topEmotionId}" dengan intensitas ${topEmotion.avgIntensity}/10 dan persistensi ${persistenceLabel}.\n\nBerikan balasan HANYA dalam format JSON valid (tanpa blok markdown/backticks), dengan struktur murni seperti ini:\n{"summary": "ringkasan narasi tentang pola emosi user, maks 60 kata", "suggestion": "saran kegiatan nyata untuk user, maks 40 kata"}`;
+  prompt += `\nEmosi dominan adalah "${topEmotionId}" dengan intensitas ${topEmotion.avgIntensity}/10 dan persistensi ${persistenceLabel}.\n`;
+
+  if (weeklyMetrics) {
+    prompt += `\nHasil perhitungan Rule-Based: Skor rata-rata suasana hati pengguna minggu ini adalah ${weeklyMetrics.averageScore}/5 dengan kategori status "${weeklyMetrics.moodState}".\n`;
+  }
+
+  prompt += `\nBerikan balasan HANYA dalam format JSON valid (tanpa blok markdown/backticks), dengan struktur murni seperti ini:\n{"summary": "ringkasan narasi tentang pola emosi user berdasarkan data di atas, maks 60 kata", "prediction": "prediksi tren mood user di masa depan secara singkat berdasarkan polanya, maks 30 kata", "suggestion": "saran kegiatan nyata yang sesuai untuk user, maks 40 kata"}`;
 
   return prompt;
 };
