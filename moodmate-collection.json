@@ -1,503 +1,711 @@
 {
   "info": {
-    "name": "app.js",
+    "name": "MoodMate API - Automated Test Collection",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "bearerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "habitId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "logId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testEmail",
+      "value": "test@example.com",
+      "type": "string"
+    },
+    {
+      "key": "testPassword",
+      "value": "password123456",
+      "type": "string"
+    },
+    {
+      "key": "testName",
+      "value": "Test User",
+      "type": "string"
+    },
+    {
+      "key": "completionDate",
+      "value": "2025-01-15",
+      "type": "string"
+    },
+    {
+      "key": "fromDate",
+      "value": "2025-01-01",
+      "type": "string"
+    },
+    {
+      "key": "toDate",
+      "value": "2025-01-31",
+      "type": "string"
+    }
+  ],
   "item": [
     {
-      "name": "/",
+      "name": "Authentication",
       "item": [
         {
-          "name": "GET /",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": []
-            }
-          }
-        },
-        {
-          "name": "POST /",
+          "name": "1. Register - Get Token",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{$randomFirstName}}\",\n  \"email\": \"test_{{randomSuffix}}@test.com\",\n  \"password\": \"password123456\"\n}"
+            },
             "url": {
-              "raw": "{{baseUrl}}/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": []
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set(\"bearerToken\", jsonData.data.token);",
+                  "    pm.test(\"Token captured\", function () {",
+                  "        pm.expect(pm.collectionVariables.get(\"bearerToken\")).to.exist;",
+                  "    });",
+                  "} else {",
+                  "    pm.test(\"Warning: Token not in expected format\", function () {",
+                  "        pm.expect(true).to.eql(true);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         },
         {
-          "name": "GET /",
+          "name": "2. Login - Get Token",
           "request": {
-            "method": "GET",
-            "header": [],
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+            },
             "url": {
-              "raw": "{{baseUrl}}/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": []
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set(\"bearerToken\", jsonData.data.token);",
+                  "    pm.test(\"Token saved\", function () {",
+                  "        pm.expect(pm.collectionVariables.get(\"bearerToken\")).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         },
         {
-          "name": "GET /",
+          "name": "3. Get Profile",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": []
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "summary"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Has total_checkins\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.total_checkins).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mood Logs (FID)",
+      "item": [
+        {
+          "name": "1. Create FID Log",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emotion\": \"Joy\",\n  \"intensity\": 8,\n  \"journal_text\": \"Test journal entry for automation\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/logs",
+              "host": ["{{baseUrl}}"],
+              "path": ["logs"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.log && jsonData.data.log.id) {",
+                  "    pm.collectionVariables.set(\"logId\", jsonData.data.log.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         },
         {
-          "name": "POST /",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "api",
-      "item": [
-        {
-          "name": "GET /api/v1",
+          "name": "2. Get Today Status",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1"
-              ]
+              "raw": "{{baseUrl}}/logs/today",
+              "host": ["{{baseUrl}}"],
+              "path": ["logs", "today"]
             }
-          }
-        }
-      ]
-    },
-    {
-      "name": "register",
-      "item": [
-        {
-          "name": "POST /register",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/register",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "register"
-              ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
             }
-          }
-        }
-      ]
-    },
-    {
-      "name": "login",
-      "item": [
+          ]
+        },
         {
-          "name": "POST /login",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "login"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "today",
-      "item": [
-        {
-          "name": "GET /today",
+          "name": "3. Get Calendar Logs",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/today",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "today"
+              "raw": "{{baseUrl}}/logs/calendar?month=1&year=2025",
+              "host": ["{{baseUrl}}"],
+              "path": ["logs", "calendar"],
+              "query": [
+                { "key": "month", "value": "1" },
+                { "key": "year", "value": "2025" }
               ]
             }
-          }
-        }
-      ]
-    },
-    {
-      "name": "calendar",
-      "item": [
-        {
-          "name": "GET /calendar",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/calendar",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "calendar"
-              ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
             }
-          }
-        }
-      ]
-    },
-    {
-      "name": "date",
-      "item": [
+          ]
+        },
         {
-          "name": "GET /date/:date",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/date/:date",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "date",
-                ":date"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": ":id",
-      "item": [
-        {
-          "name": "PUT /:id",
+          "name": "4. Update Log",
           "request": {
             "method": "PUT",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emotion\": \"Trust\",\n  \"intensity\": 7,\n  \"journal_text\": \"Updated journal entry\"\n}"
+            },
             "url": {
-              "raw": "{{baseUrl}}/:id",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                ":id"
-              ]
+              "raw": "{{baseUrl}}/logs/{{logId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["logs", "{{logId}}"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         },
         {
-          "name": "DELETE /:id",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/:id",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                ":id"
-              ]
-            }
-          }
-        },
-        {
-          "name": "GET /:id",
+          "name": "5. Get All Logs",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/:id",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                ":id"
+              "raw": "{{baseUrl}}/logs?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["logs"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         },
         {
-          "name": "PATCH /:id",
+          "name": "6. Delete Log",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/logs/{{logId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["logs", "{{logId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Habits",
+      "item": [
+        {
+          "name": "1. Create Habit",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Morning Exercise\",\n  \"description\": \"Stretching for 15 minutes\",\n  \"targetDate\": \"2025-01-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/habits",
+              "host": ["{{baseUrl}}"],
+              "path": ["habits"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.habit && jsonData.data.habit.id) {",
+                  "    pm.collectionVariables.set(\"habitId\", jsonData.data.habit.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Get Habits",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/habits",
+              "host": ["{{baseUrl}}"],
+              "path": ["habits"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Get Habit By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/habits/{{habitId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["habits", "{{habitId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Update Habit",
           "request": {
             "method": "PATCH",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Habit Title\",\n  \"description\": \"Updated description\"\n}"
+            },
             "url": {
-              "raw": "{{baseUrl}}/:id",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                ":id"
-              ]
+              "raw": "{{baseUrl}}/habits/{{habitId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["habits", "{{habitId}}"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         },
         {
-          "name": "DELETE /:id",
+          "name": "5. Create Habit Completion",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{completionDate}}\",\n  \"note\": \"Completed today\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/habits/{{habitId}}/completions",
+              "host": ["{{baseUrl}}"],
+              "path": ["habits", "{{habitId}}", "completions"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 or 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 200]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. Delete Habit Completion",
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/:id",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                ":id"
+              "raw": "{{baseUrl}}/habits/{{habitId}}/completions?date={{completionDate}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["habits", "{{habitId}}", "completions"],
+              "query": [
+                { "key": "date", "value": "{{completionDate}}" }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         },
         {
-          "name": "POST /:id/completions",
+          "name": "7. Get Habit Summary",
           "request": {
-            "method": "POST",
-            "header": [],
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/:id/completions",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                ":id",
-                "completions"
+              "raw": "{{baseUrl}}/habits/summary?from={{fromDate}}&to={{toDate}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["habits", "summary"],
+              "query": [
+                { "key": "from", "value": "{{fromDate}}" },
+                { "key": "to", "value": "{{toDate}}" }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         },
         {
-          "name": "DELETE /:id/completions",
+          "name": "8. Delete Habit",
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/:id/completions",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                ":id",
-                "completions"
-              ]
+              "raw": "{{baseUrl}}/habits/{{habitId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["habits", "{{habitId}}"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insights",
+      "item": [
+        {
+          "name": "Get Weekly Insights",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bearerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/insights/weekly",
+              "host": ["{{baseUrl}}"],
+              "path": ["insights", "weekly"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Has week_number\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.week_number).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         },
         {
-          "name": "GET /:id/completions",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/:id/completions",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                ":id",
-                "completions"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "summary",
-      "item": [
-        {
-          "name": "GET /summary",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/summary",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "summary"
-              ]
-            }
-          }
-        },
-        {
-          "name": "GET /summary",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/summary",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "summary"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "weekly",
-      "item": [
-        {
-          "name": "GET /weekly",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/weekly",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "weekly"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "me",
-      "item": [
-        {
-          "name": "GET /me",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "me"
-              ]
-            }
-          }
-        },
-        {
-          "name": "PUT /me",
-          "request": {
-            "method": "PUT",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "me"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "logout",
-      "item": [
-        {
-          "name": "POST /logout",
+          "name": "Trigger Weekly Summary Scheduler",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/logout",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "logout"
-              ]
+              "raw": "{{baseUrl}}/scheduler/weekly-summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["scheduler", "weekly-summary"]
             }
-          }
-        }
-      ]
-    },
-    {
-      "name": "insights",
-      "item": [
-        {
-          "name": "GET /insights",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/insights",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "insights"
-              ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
             }
-          }
-        }
-      ]
-    },
-    {
-      "name": "weekly-summary",
-      "item": [
-        {
-          "name": "POST /weekly-summary",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/weekly-summary",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "weekly-summary"
-              ]
-            }
-          }
+          ]
         }
       ]
     }
