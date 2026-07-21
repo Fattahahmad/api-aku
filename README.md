@@ -1,263 +1,186 @@
-# MoodMate API
+# AKU API - Backend Application
 
-Backend API untuk aplikasi pelacakan mood harian dengan analisis emosi berbasis AI.
+Backend RESTful API untuk **AKU** (Aplikasi Self-Improvement & Emotional Tracking) yang menyediakan layanan pelacakan suasana hati harian (*Mood Tracker*), analisis emosi berbasis *Rule-Based Scoring* & Gemini AI, pelacak kebiasaan (*Habit Tracker*), serta sistem autentikasi aman.
 
-## Deskripsi
+---
 
-MoodMate membantu pengguna mencatat emosi harian berbasis FID (Frequency, Intensity, Duration) dengan teori 8 Core Emotions Robert Plutchik, dan memberikan insight serta rekomendasi personal via Gemini AI.
+## 📌 Pilar Utama Fitur Aplikasi AKU
 
-## Fitur Utama
+Sistem ini dirancang untuk memfasilitasi *self-improvement* mandiri pengguna yang dibagi ke dalam **tiga pilar utama** dan **satu pilar pendukung**:
 
-- **Autentikasi** - Register, login dengan JWT
-- **Check-in Harian FID** - Pilih dari 8 emosi Plutchik + intensity (1-10) + duration (1-3) + jurnal
-- **Streak Tracking** - Hitung konsistensi check-in harian
-- **Dashboard FID** - Statistik FID score + insight AI
-- **Weekly Insights FID** - Agregasi Frequency/Intensity/Duration + summary AI
-- **Habit Tracker** - CRUD habit, completion, streak, completion rate, dan summary
-- **Redis Cache** - Cache AI response (optional)
-- **Scheduler** - Weekly summary otomatis via QStash
+### 1. Fitur "Aku Paham" (Mood Tracker & Analisis AI)
+* **Teori Emosi Plutchik**: Mengklasifikasikan emosi harian ke dalam 8 emosi dasar (*Joy, Trust, Fear, Surprise, Sadness, Disgust, Anger, Anticipation*).
+* **Pencatatan Emosi & Jurnal**: Pengguna memasukkan emosi, intensitas suasana hati (skala `1 - 10`), serta catatan jurnal harian.
+* **Rule-Based Scoring (If-Then Logic)**: 
+  * Intensitas 1-10 dipetakan (*mapped*) ke skala 1-5 menggunakan rumus $\lceil \text{intensity} / 2 \rceil$.
+  * Skor mood harian (*Daily Mood Score*) dihitung berdasarkan kelompok emosi:
+    * **Emosi Positif (`Joy`, `Trust`)**: $\text{Score} = \text{Mapped Intensity}$
+    * **Emosi Negatif (`Sadness`, `Fear`, `Anger`, `Disgust`)**: $\text{Score} = 6 - \text{Mapped Intensity}$
+    * **Emosi Netral/Transisi (`Surprise`, `Anticipation`)**: Skor seimbang `3` (atau `4` untuk Anticipation berintensitas tinggi).
+  * Di akhir minggu, rata-rata skor diklasifikasikan ke dalam **Weekly Mood State (Kategori Risiko)**: *Sangat Baik*, *Baik*, *Cukup*, *Perlu Perhatian*, atau *Sangat Perlu Perhatian*.
+* **AI Predictive Analysis & Insight**: Google Gemini AI membaca data *Rule-Based* untuk menghasilkan:
+  * **Summary**: Narasi ringkasan pola emosi mingguan.
+  * **Prediction**: Prediksi tren suasana hati pengguna di masa depan.
+  * **Suggestion**: Rekomendasi aktivitas/tindakan konkret untuk pengguna.
 
-## Tech Stack
+### 2. Fitur "Aku Lebih Baik" (Habit Tracker)
+* **Pembuatan Target**: Membuat dan mengedit target kebiasaan baru yang ingin dibangun pengguna.
+* **Pencatatan Streak ("Streak Hari Ini")**: Memantau progres harian dan menandai keberhasilan target habit.
+* **Kalkulasi Akumulasi**: Menghitung secara otomatis rentetan keberhasilan (*streak*) dan persentase penyelesaian (*completion rate*) secara akurat.
 
-- **Runtime**: Node.js
-- **Framework**: Express.js 5.x
-- **Database**: PostgreSQL (Supabase)
-- **Cache**: Redis (Upstash) - optional
-- **AI**: Google Gemini, HuggingFace Inference API
-- **Storage**: Supabase Storage
-- **Scheduler**: Upstash QStash / Node-Cron
+### 3. Fitur "Aku Tenang" (Latihan Pernapasan)
+* **Panduan Interaktif Sisi Client (FE)**: Menyediakan panduan animasi visual tarik/hembus napas serta kontrol mulai/jeda.
+* **Tanpa Riwayat Data**: Didesain murni di sisi antarmuka (FE) tanpa menyimpan riwayat ke database untuk menjaga privasi penuh pengguna.
 
-## Instalasi
+### 4. Fitur Pendukung (Autentikasi Pengguna)
+* **Registrasi & Login**: Keamanan identitas pengguna menggunakan enkripsi kata sandi (Bcrypt) dan JSON Web Token (JWT).
+* **Manajemen Profil & Streak**: Pengelolaan data profil pengguna dan konsistensi check-in.
 
-```bash
-npm install
-npm run migrate:up  # Jalankan migration database
-npm run dev         # Development
-npm start           # Production
+---
+
+## 🛠️ Teknologi & Stack (Tech Stack)
+
+* **Runtime**: Node.js (ES Module)
+* **Framework**: Express.js (v5)
+* **Database**: PostgreSQL (Supabase / Managed PostgreSQL)
+* **Database Migration**: `node-pg-migrate`
+* **AI Integration**: Google Generative AI (`@google/generative-ai` - Gemini Flash)
+* **Caching**: Redis / Upstash Redis (Optional fallback)
+* **Scheduler**: Upstash QStash (Automated Weekly Jobs)
+* **Validasi Input**: Joi Validation Library
+
+---
+
+## 📁 Struktur Direktori Project
+
+```text
+api-aku/
+├── database/
+│   └── migrations/             # Berkas migrasi database PostgreSQL
+├── public/                     # Static files
+├── src/
+│   ├── config/                 # Konfigurasi Database (pg) & Supabase
+│   ├── controllers/            # Controller pemrosesan logika bisnis & API
+│   │   ├── auth.controller.js
+│   │   ├── dashboard.controller.js
+│   │   ├── habit.controller.js
+│   │   ├── insight.controller.js
+│   │   ├── log.controller.js
+│   │   ├── scheduler.controller.js
+│   │   └── user.controller.js
+│   ├── exceptions/             # Custom Error Classes (ClientError, NotFound, dsb)
+│   ├── middlewares/            # Auth JWT, Error Handler, Joi Validator
+│   ├── models/                 # Query SQL ke database (User, Log, Habit, Insight)
+│   ├── routes/                 # Definisi Rute API Express
+│   ├── services/               # Layanan eksternal (Rule-Based FID, Gemini AI, Redis)
+│   ├── utils/                  # Utilitas tanggal WIB & helper
+│   ├── validators/             # Skema validasi request Joi
+│   ├── app.js                  # Inisialisasi Express app
+│   └── server.js               # Server entry point
+├── .env.example                # Template variabel lingkungan
+├── moodmate-collection.json    # Collection Postman untuk pengujian API
+├── package.json
+└── README.md
 ```
 
-## Environment Variables
+---
 
-```env
-# Server
-HOST=localhost
-PORT=3000
+## ⚙️ Panduan Instalasi & Pengoperasian Lokal
 
-# Database (Supabase PostgreSQL)
-DATABASE_URL=postgresql://...
+### 1. Prasyarat
+* Node.js (versi v18+ direkomendasikan)
+* Basis data PostgreSQL yang aktif
 
-# JWT
-JWT_SECRET=your_secret_key
+### 2. Langkah Instalasi
 
-# Supabase Storage
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_ANON_KEY=xxx
-SUPABASE_SERVICE_ROLE_KEY=xxx
+1. **Clone repository & masuk ke direktori project:**
+   ```bash
+   cd api-aku
+   ```
 
-# AI Services
-GEMINI_API_KEY=your_gemini_key
+2. **Install seluruh dependensi:**
+   ```bash
+   npm install
+   ```
 
-# Optional - Redis (jika kosong, sistem tetap berjalan)
-REDIS_URL=redis://localhost:6379
+3. **Konfigurasi Environment Variables:**
+   Salin file `.env.example` menjadi `.env` lalu sesuaikan isinya:
+   ```env
+   PORT=3000
+   NODE_ENV=development
+   DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+   JWT_SECRET=your_jwt_secret_key
+   GEMINI_API_KEY=your_google_gemini_api_key
+   ```
 
-# HuggingFace API
-HF_DAILY_ENDPOINT=https://Nuragafi-mood-tracker-api.hf.space/predict
-HF_WEEKLY_ENDPOINT=https://Nuragafi-mood-tracker-api.hf.space/summary/weekly
+4. **Jalankan Migrasi Database:**
+   ```bash
+   npm run migrate:up
+   ```
 
-# QStash Scheduler
-QSTASH_URL=https://qstash-us-east-1.upstash.io
-QSTASH_TOKEN=xxx
-QSTASH_CURRENT_SIGNING_KEY=sig_xxx
-QSTASH_NEXT_SIGNING_KEY=sig_xxx
-```
+5. **Jalankan Aplikasi:**
+   * **Mode Development (Auto-reload):**
+     ```bash
+     npm run dev
+     ```
+   * **Mode Production:**
+     ```bash
+     npm start
+     ```
 
-## Struktur Folder
+---
 
-```
-src/
-├── app.js                      # Express app configuration
-├── server.js                   # Server entry point
-├── config/
-│   ├── database.js            # PostgreSQL connection
-│   └── supabase.js            # Supabase client
-├── controllers/
-│   ├── auth.controller.js     # Auth endpoints
-│   ├── user.controller.js       # User profile
-│   ├── log.controller.js        # Daily check-in
-│   ├── habit.controller.js      # Habit tracker
-│   ├── insight.controller.js    # Weekly insights
-│   └── dashboard.controller.js    # Dashboard summary
-├── models/
-│   ├── user.model.js            # User queries
-│   ├── log.model.js             # Log queries
-│   ├── habit.model.js           # Habit and completion queries
-│   ├── insight.model.js         # Insight queries
-│   ├── dashboard.model.js       # Dashboard queries
-│   └── ai_analyses.model.js     # AI analysis storage
-├── routes/
-│   ├── auth.routes.js           # /api/v1/auth
-│   ├── user.routes.js           # /api/v1/users
-│   ├── log.routes.js            # /api/v1/logs
-│   ├── habit.routes.js          # /api/v1/habits
-│   ├── insight.routes.js        # /api/v1/insights
-│   └── scheduler.routes.js      # /api/v1/scheduler
-├── services/
-│   ├── gemini.service.js        # Google Gemini AI
-│   ├── hf.service.js            # HuggingFace AI
-│   ├── redis.service.js         # Redis cache
-│   └── qstash.service.js        # QStash scheduler
-├── middlewares/
-│   ├── auth.middleware.js       # JWT auth
-│   ├── validate.middleware.js   # Joi validation
-│   └── error.middleware.js      # Error handler
-├── exceptions/
-│   ├── ClientError.js
-│   ├── NotFoundError.js
-│   ├── InvariantError.js
-│   └── AuthenticationError.js
-└── jobs/
-    └── hf-scheduler.js          # Weekly job scheduler
-```
+## 📑 Dokumentasi API Endpoints
 
-## API Endpoints
+### 🔐 Autentikasi (`/api/v1/auth`)
+* `POST /api/v1/auth/register` — Registrasi pengguna baru.
+* `POST /api/v1/auth/login` — Login pengguna & mengembalikan token JWT.
 
-### Auth
-- `POST /api/v1/auth/register` - Register user
-- `POST /api/v1/auth/login` - Login, dapatkan JWT
+### 👤 Pengguna (`/api/v1/users`)
+* `GET /api/v1/users/me` — Mengambil data profil pengguna yang sedang login.
+* `PUT /api/v1/users/me` — Memperbarui data profil pengguna.
+* `POST /api/v1/users/logout` — Logout dari sistem.
 
-### User
-- `GET /api/v1/users/me` - Get profile
-- `PUT /api/v1/users/me` - Update profile + avatar
-- `POST /api/v1/users/logout` - Logout
+### 📝 Mood Logs (`/api/v1/logs`)
+* `POST /api/v1/logs` — Mencatat mood harian (Emosi Plutchik, Intensitas 1-10, Jurnal). Mengembalikan *suggestion* harian dari AI.
+* `GET /api/v1/logs/today` — Mengecek status check-in hari ini.
+* `GET /api/v1/logs/calendar` — Mengambil riwayat mood bulanan (Query: `?month=7&year=2026`).
+* `GET /api/v1/logs/date/:date` — Mengambil detail log pada tanggal tertentu (`YYYY-MM-DD`).
+* `PUT /api/v1/logs/:id` — Memperbarui log mood hari ini.
+* `DELETE /api/v1/logs/:id` — Menghapus log mood hari ini.
+* `GET /api/v1/logs` — Mengambil riwayat log mood dengan paginasi.
 
-### Logs
-- `POST /api/v1/logs` - Create daily log (emotion, intensity, duration) + suggestion
-- `GET /api/v1/logs/today` - Check today status
-- `GET /api/v1/logs/calendar?month=X&year=Y` - Monthly calendar
-- `GET /api/v1/logs/date/:date` - Log by date
-- `PUT /api/v1/logs/:id` - Update log
-- `DELETE /api/v1/logs/:id` - Delete log
-- `GET /api/v1/logs` - History with pagination
+### 🎯 Habits (`/api/v1/habits`)
+* `GET /api/v1/habits` — Mengambil daftar habit aktif milik pengguna.
+* `POST /api/v1/habits` — Membuat target habit baru.
+* `GET /api/v1/habits/:id` — Mengambil detail habit berdasarkan ID.
+* `PATCH /api/v1/habits/:id` — Memperbarui data habit.
+* `DELETE /api/v1/habits/:id` — Menghapus habit.
+* `POST /api/v1/habits/:id/completions` — Menandai habit selesai pada tanggal tertentu (*Streak hari ini*).
+* `DELETE /api/v1/habits/:id/completions` — Membatalkan tanda selesai habit (Query: `?date=YYYY-MM-DD`).
+* `GET /api/v1/habits/summary` — Statistik & persentase penyelesaian habit mingguan/bulanan.
+* `GET /api/v1/habits/insights` — Insight performa per habit.
 
-Payload POST /api/v1/logs:
-```json
-{
-  "emotion": "Joy",
-  "intensity": 8,
-  "duration": 2,
-  "journal_text": "Catatan pribadi"
-}
-```
-FID Score = intensity × duration
+### 📊 Dashboard (`/api/v1/dashboard`)
+* `GET /api/v1/dashboard/summary` — Ringkasan total check-in, rata-rata intensitas, dan insight cepat AI.
 
-### Habits
-- `GET /api/v1/habits` - List habit milik user
-- `POST /api/v1/habits` - Buat habit baru
-- `PATCH /api/v1/habits/:id` - Edit habit
-- `DELETE /api/v1/habits/:id` - Hapus habit
-- `POST /api/v1/habits/:id/completions` - Tandai habit selesai
-- `DELETE /api/v1/habits/:id/completions?date=YYYY-MM-DD` - Batalkan completion
-- `GET /api/v1/habits/:id/completions?from=YYYY-MM-DD&to=YYYY-MM-DD` - History completion habit
-- `GET /api/v1/habits/summary?from=YYYY-MM-DD&to=YYYY-MM-DD` - Summary habit global
-- `GET /api/v1/habits/insights?from=YYYY-MM-DD&to=YYYY-MM-DD` - Insight per habit
+### 💡 Insights & Weekly Analysis (`/api/v1/insights`)
+* `GET /api/v1/insights/weekly` — Mengambil hasil agregasi emosi mingguan, tren 7 hari, narasi summary AI, saran kegiatan (*suggestion*), dan kategori status risiko (*mood_state*).
 
-### Dashboard
-- `GET /api/v1/dashboard/summary` - Statistik + AI insight
+### ⏰ Scheduler (`/api/v1/scheduler`)
+* `POST /api/v1/scheduler/weekly-summary` — Trigger pemrosesan otomatis laporan mingguan (Diintegrasikan dengan QStash / Cron).
 
-### Insights
-- `GET /api/v1/insights/weekly` - Weekly trend + summary
-- `POST /api/v1/insights/weekly-trigger` - Manual weekly trigger
+---
 
-### Scheduler
-- `POST /api/v1/scheduler/weekly-summary` - QStash trigger
+## 🧪 Pengujian Otomatis (Postman Collection)
 
-## Developer Documentation
+File `moodmate-collection.json` disediakan di akar direktori untuk pengujian API secara menyeluruh menggunakan **Postman Collection Runner**:
+1. Impor `moodmate-collection.json` ke aplikasi Postman.
+2. Jalankan **Run Collection**.
+3. Skrip otomatis akan mendaftarkan user baru dengan email dinamik unik, menangkap `bearerToken`, serta menguji seluruh siklus rute API dari Registrasi hingga Weekly Insights secara otomatis.
 
-### Models
+---
 
-#### user.model.js
-- `findUserByEmail(email)` - Cari user by email
-- `findUserById(id)` - Cari user by UUID
-- `createUser(name, email, hashedPassword)` - Buat user baru
-- `updateUserProfile(userId, name, avatarUrl)` - Update profil
-- `updateUserStreak(userId)` - Update streak (logic terpisah hari)
+## 📄 Lisensi & Hak Cipta
 
-#### log.model.js
-- `createDailyLog(userId, emotion, intensity, duration, journalText)` - Buat log FID harian
-- `checkLogToday(userId)` - Cek apakah sudah check-in
-- `getMonthlyLogs(userId, month, year)` - Ambil log 1 bulan
-- `getLogByDate(userId, dateString)` - Log spesifik tanggal
-- `getWeeklyFIDData(userId, weekStart, weekEnd)` - Ambil data FID mingguan
-- `getWeeklyFIDAggregation(userId, weekStart, weekEnd)` - Agregasi FID mingguan
-- `getRecentFIDTrend(userId, limit)` - Trend FID terbaru
-
-#### habit.model.js
-- `getHabits(userId)` - List habit user
-- `createHabit(userId, title, description, targetDate)` - Buat habit baru
-- `updateHabit(userId, habitId, title, description, targetDate)` - Edit habit
-- `deleteHabit(userId, habitId)` - Hapus habit
-- `createCompletion(userId, habitId, completedAt, note)` - Tandai habit selesai
-- `deleteCompletion(userId, habitId, completedAt)` - Batalkan completion
-- `getHabitSummary(userId, from, to)` - Summary global habit
-- `getHabitInsights(userId, from, to)` - Insight per habit
-
-#### ai_analyses.model.js
-- `createAIAnalysis(userId, logId, inputType, emotion, confidence)` - Simpan hasil AI
-- `getWeeklyAIAnalyses(userId, startDate, endDate)` - Ambil data untuk weekly summary
-
-### Services
-
-#### fid.service.js (BARU)
-- `calculateFIDScore(intensity, duration)` - Hitung FID score
-- `getWeeklyFIDData(userId, from, to)` - Ambil data FID mingguan
-- `aggregateWeeklyFID(logs)` - Agregasi F, I, D per emosi
-- `buildFIDPrompt(aggregates)` - Buat prompt untuk Gemini
-
-#### gemini.service.js
-- `generateDailySuggestion(emotion, intensity, journalText, userId)` - Buat rekomendasi harian
-- `generateWeeklyFIDSummary(fidPrompt, userId)` - Buat ringkasan FID mingguan
-- `generateDashboardInsight(totalCheckins, avgFidScore, fidTrend, userId)` - AI insight dashboard
-
-#### redis.service.js
-- `getRedisClient()` - Dapatkan Redis client
-- Cache sudah dipindahkan ke fid/gemini service
-
-#### redis.service.js
-- `cacheEmotionResult(journalText, emotion, confidence)` - Cache hasil emotion (24 jam)
-- `getEmotionResult(journalText)` - Ambil dari cache
-- `incrementRateLimit(key)` - Rate limiting simple
-
-### Controllers
-
-#### log.controller.js
-- `createLog` - Buat log + panggil HF + simpan ke `ai_analyses` + return suggestion Gemini
-
-#### habit.controller.js
-- `createHabit`, `updateHabit`, `deleteHabit` - CRUD habit
-- `createCompletion`, `deleteCompletion` - Tandai dan batalkan completion
-- `getHabitSummary`, `getHabitInsights` - Summary dan insight habit
-
-#### insight.controller.js
-- `getWeeklyInsights` - Query trend + emotion + ai_analyses → kirim ke HF weekly
-
-### Variables Penting
-
-- `mood_score`: Integer 0-5 (very sad → very happy)
-- `emotion_label`: String (sadness, joy, anger, fear, calm, dll)
-- `confidence`: Float 0.0 - 1.0
-- `current_streak`: Counter konsistensi check-in
-
-## ML Model
-
-Model HuggingFace untuk analisis emosi:
-- **Endpoint**: https://Nuragafi-mood-tracker-api.hf.space
-- **Model**: Fine-tuned untuk deteksi emosi Indonesia/Inggris
-
-## Deployment (Vercel)
-
-1. Set environment variables di Vercel Dashboard
-2. Build command: `npm run migrate:up && npm install`
-3. Output directory: (default)
-4. QStash scheduler: buat di https://console.upstash.com/qstash/schedules
-   - URL: `https://your-api.vercel.app/api/v1/scheduler/weekly-summary`
-   - Cron: `0 1 * * 0` (Minggu jam 01:00 UTC = 08:00 WIB)
+Dokumen ini disusun sebagai bagian dari Dokumentasi Sistem Backend Aplikasi **AKU**. Hak cipta dilindungi oleh pengembang project Tugas Akhir.
