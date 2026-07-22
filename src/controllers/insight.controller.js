@@ -14,21 +14,6 @@ export const getWeeklyInsights = async (req, res, next) => {
     const userId = req.user.id;
     const { from, to, weekNumber } = getWeekBoundaries();
 
-    const weeklyInsight = await insightModel.getWeeklyInsightFromDB(userId, weekNumber);
-
-    if (!weeklyInsight) {
-      return res.status(200).json({
-        status: 'success',
-        data: {
-          week_number: weekNumber,
-          week_range: { from, to },
-          mood_trend: [],
-          fid_aggregates: [],
-          summary: TEMPLATE_SUMMARY
-        }
-      });
-    }
-
     const trendData = await logModel.getWeeklyFIDData(userId, from, to);
 
     const formattedTrend = trendData.map(item => ({
@@ -39,6 +24,18 @@ export const getWeeklyInsights = async (req, res, next) => {
     }));
 
     const fidAggregates = fidService.aggregateWeeklyFID(trendData);
+    const weeklyMetrics = fidService.calculateWeeklyMoodMetrics(trendData);
+
+    const weeklyInsight = await insightModel.getWeeklyInsightFromDB(userId, weekNumber);
+
+    const summaryData = weeklyInsight ? {
+      text: weeklyInsight.summary_text,
+      suggestion: weeklyInsight.suggestion_text || ''
+    } : TEMPLATE_SUMMARY;
+
+    const moodState = weeklyInsight
+      ? (weeklyInsight.mood_state || weeklyMetrics.moodState)
+      : (trendData.length > 0 ? weeklyMetrics.moodState : 'Cukup');
 
     res.status(200).json({
       status: 'success',
@@ -47,11 +44,8 @@ export const getWeeklyInsights = async (req, res, next) => {
         week_range: { from, to },
         mood_trend: formattedTrend,
         fid_aggregates: fidAggregates,
-        summary: {
-          text: weeklyInsight.summary_text,
-          suggestion: weeklyInsight.suggestion_text || ''
-        },
-        mood_state: weeklyInsight.mood_state || 'Cukup'
+        summary: summaryData,
+        mood_state: moodState
       }
     });
   } catch (error) {
